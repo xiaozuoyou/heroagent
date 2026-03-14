@@ -8,7 +8,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from init_heroagent import init_workspace
+from common import init_workspace
+from common import render_template
 
 
 def render_focus(
@@ -19,15 +20,17 @@ def render_focus(
     blockers: str,
     next_step: str,
 ) -> str:
-    return f"""## 进度快照
-
-- 当前目标：{goal}
-- 当前阶段：{stage}
-- 已完成：{completed}
-- 进行中：{in_progress}
-- 阻塞：{blockers}
-- 下一步：{next_step}
-"""
+    return render_template(
+        "progress-snapshot.md",
+        fields={
+            "当前目标": goal,
+            "当前阶段": stage,
+            "已完成": completed,
+            "进行中": in_progress,
+            "阻塞": blockers,
+            "下一步": next_step,
+        },
+    )
 
 
 def main() -> int:

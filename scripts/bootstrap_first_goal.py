@@ -6,111 +6,49 @@ Bootstrap the first HeroAgent goal artifacts in a target project.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
-import hashlib
 from pathlib import Path
-import re
 
-from init_heroagent import init_workspace
-
-
-def slugify(text: str) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9]+", "-", text.strip().lower()).strip("-")
-    if slug:
-        return slug
-
-    digest = hashlib.sha1(text.strip().encode("utf-8")).hexdigest()[:8]
-    return f"goal-{digest}"
-
-
-def timestamp_now() -> str:
-    return datetime.now().strftime("%Y%m%d%H%M")
-
-
-def safe_write(path: Path, content: str) -> Path:
-    if not path.exists():
-        path.write_text(content, encoding="utf-8")
-        return path
-
-    stem = path.stem
-    suffix = path.suffix
-    parent = path.parent
-    index = 1
-    while True:
-        candidate = parent / f"{stem}-{index}{suffix}"
-        if not candidate.exists():
-            candidate.write_text(content, encoding="utf-8")
-            return candidate
-        index += 1
+from common import init_workspace
+from common import render_template
+from common import safe_write
+from common import slugify
+from common import timestamp_now
 
 
 def goal_card(goal_title: str) -> str:
-    return f"""## 目标卡片
-
-- 目标：{goal_title}
-- 背景：
-- 价值：
-- 范围：
-- 不做什么：
-- 成功标准：
-- 约束：
-- 下一步：补全目标边界与成功标准
-"""
+    return render_template(
+        "goal-card.md",
+        fields={"目标": goal_title},
+        next_step="补全目标边界与成功标准",
+    )
 
 
 def milestone_plan() -> str:
-    return """## 里程碑计划
-
-1. 阶段：
-   产出：
-   风险：
-   完成标志：
-
-2. 阶段：
-   产出：
-   风险：
-   完成标志：
-
-3. 阶段：
-   产出：
-   风险：
-   完成标志：
-
-## 下一步
-
-- 根据目标卡片补齐阶段路径
-"""
+    return render_template(
+        "milestone-plan.md",
+        next_step="根据目标卡片补齐阶段路径",
+    )
 
 
 def todo_list() -> str:
-    return """## 任务列表
-
-- [ ] 任务名
-  完成定义：
-  依赖：
-  优先级：
-
-- [ ] 任务名
-  完成定义：
-  依赖：
-  优先级：
-
-## 下一步
-
-- 根据里程碑计划拆解第一批可执行任务
-"""
+    return render_template(
+        "todo-list.md",
+        next_step="根据里程碑计划拆解第一批可执行任务",
+    )
 
 
 def current_focus(goal_title: str, stage: str) -> str:
-    return f"""## 进度快照
-
-- 当前目标：{goal_title}
-- 当前阶段：{stage}
-- 已完成：已初始化 HeroAgent 工作区与首批草稿文件
-- 进行中：补全目标与计划
-- 阻塞：
-- 下一步：先完善目标卡片，再细化里程碑计划
-"""
+    return render_template(
+        "progress-snapshot.md",
+        fields={
+            "当前目标": goal_title,
+            "当前阶段": stage,
+            "已完成": "已初始化 HeroAgent 工作区与首批草稿文件",
+            "进行中": "补全目标与计划",
+            "阻塞": "",
+            "下一步": "先完善目标卡片，再细化里程碑计划",
+        },
+    )
 
 
 def bootstrap(target: Path, goal_title: str, stage: str, refresh_focus: bool) -> list[Path]:

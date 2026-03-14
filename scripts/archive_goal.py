@@ -6,15 +6,12 @@ Archive HeroAgent goal artifacts into .heroagent/archive/.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 from pathlib import Path
 import shutil
 
-from init_heroagent import init_workspace
-
-
-def timestamp_now() -> str:
-    return datetime.now().strftime("%Y%m%d%H%M")
+from common import init_workspace
+from common import render_blank_focus
+from common import timestamp_now
 
 
 def safe_archive_dir(base: Path, name: str) -> Path:
@@ -43,18 +40,7 @@ def maybe_move(path: Path, archive_dir: Path, folder: str, moved: list[Path]) ->
 
 
 def reset_current_focus(path: Path) -> None:
-    path.write_text(
-        """## 进度快照
-
-- 当前目标：
-- 当前阶段：
-- 已完成：
-- 进行中：
-- 阻塞：
-- 下一步：
-""",
-        encoding="utf-8",
-    )
+    path.write_text(render_blank_focus(), encoding="utf-8")
 
 
 def main() -> int:

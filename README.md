@@ -185,8 +185,7 @@ heroagent/
 
 1. `README.md`
 2. `SKILL.md`
-3. `references/operating-playbook.md`
-4. `scripts/`
+3. `scripts/`
 
 ## 适用场景
 

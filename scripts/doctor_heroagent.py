@@ -8,17 +8,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-
-REQUIRED_DIRS = [
-    "goals",
-    "plans",
-    "tasks",
-    "progress",
-    "retros",
-    "principles",
-    "processes",
-    "archive",
-]
+from common import REQUIRED_DIRS
+from common import WORKSPACE_DIRNAME
 
 
 def main() -> int:
@@ -34,7 +25,7 @@ def main() -> int:
     args = parser.parse_args()
 
     target = Path(args.target).resolve()
-    root = target / ".heroagent"
+    root = target / WORKSPACE_DIRNAME
 
     print(f"HeroAgent doctor target: {target}")
 
