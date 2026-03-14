@@ -168,13 +168,16 @@ python3 scripts/archive_goal.py --slug goal-d348d219 --reset-focus /path/to/proj
 
 ## 响应约定
 
-使用 `heroagent` 时，回复第一行必须是：
+使用 `heroagent` 时，推荐使用单行状态头，例如：
 
 ```md
-[HeroAgent]
+✅ HeroAgent · 计划制定
+❓ HeroAgent · 需要确认
+⚠️ HeroAgent · 进度聚焦
+💡 HeroAgent · 咨询问答
 ```
 
-这是这个 skill 的固定输出约束。
+不再要求单独输出 `[HeroAgent]`。
 
 ## 仓库结构
 
