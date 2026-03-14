@@ -32,6 +32,10 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertTrue((root / "goals").is_dir())
             self.assertTrue((root / "progress" / "current-focus.md").exists())
             self.assertTrue((root / "README.md").exists())
+            self.assertTrue((root / "wiki" / "overview.md").exists())
+            self.assertTrue((root / "wiki" / "arch.md").exists())
+            self.assertTrue((root / "wiki" / "api.md").exists())
+            self.assertTrue((root / "wiki" / "data.md").exists())
 
     def test_bootstrap_creates_seed_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -109,6 +113,30 @@ class HeroAgentScriptsTest(unittest.TestCase):
             healthy = run_script("doctor_heroagent.py", tmpdir)
             self.assertEqual(healthy.returncode, 0, healthy.stderr)
             self.assertIn("HEALTHY", healthy.stdout)
+
+    def test_update_wiki_context_appends_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_wiki_context.py",
+                "--section",
+                "overview",
+                "--content",
+                "## 新增说明\n\n- 支付模块负责统一收单",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            content = (Path(tmpdir) / ".heroagent" / "wiki" / "overview.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("支付模块负责统一收单", content)
+
+    def test_init_creates_wiki_modules_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            modules_dir = Path(tmpdir) / ".heroagent" / "wiki" / "modules"
+            self.assertTrue(modules_dir.is_dir())
 
 
 if __name__ == "__main__":

@@ -21,6 +21,8 @@ REQUIRED_DIRS = [
     "principles",
     "processes",
     "archive",
+    "wiki",
+    "wiki/modules",
 ]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -41,6 +43,59 @@ This workspace stores goal execution artifacts for HeroAgent.
 - principles: reusable principles
 - processes: reusable workflows
 - archive: closed or abandoned work
+- wiki: reusable project knowledge and context
+"""
+
+WIKI_OVERVIEW_CONTENT = """# 项目概览
+
+## 目标
+
+- 
+
+## 模块总览
+
+- 
+
+## 当前重点
+
+- 
+"""
+
+WIKI_ARCH_CONTENT = """# 架构设计
+
+## 核心结构
+
+- 
+
+## 关键模块关系
+
+- 
+
+## 架构约束
+
+- 
+"""
+
+WIKI_API_CONTENT = """# API 手册
+
+## 对外接口
+
+- 
+
+## 关键约定
+
+- 
+"""
+
+WIKI_DATA_CONTENT = """# 数据模型
+
+## 核心实体
+
+- 
+
+## 关键字段约束
+
+- 
 """
 
 
@@ -152,5 +207,10 @@ def init_workspace(target: Path, with_readme: bool, with_current_focus: bool) ->
 
     if with_current_focus:
         write_if_missing(root / "progress" / "current-focus.md", render_blank_focus())
+
+    write_if_missing(root / "wiki" / "overview.md", WIKI_OVERVIEW_CONTENT)
+    write_if_missing(root / "wiki" / "arch.md", WIKI_ARCH_CONTENT)
+    write_if_missing(root / "wiki" / "api.md", WIKI_API_CONTENT)
+    write_if_missing(root / "wiki" / "data.md", WIKI_DATA_CONTENT)
 
     return root
