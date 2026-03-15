@@ -86,170 +86,203 @@ HeroAgent 现在支持 `.heroagent/wiki/`：
 - `modules/auth.md`
 - `modules/reporting.md`
 
-如果你刚完成一轮代码改动，建议先推导这次应同步哪些 wiki：
+## 对话使用
 
-```bash
-python3 scripts/suggest_wiki_updates.py \
-  src/payments/service.ts \
-  src/api/routes/orders.ts \
-  prisma/schema.prisma
-```
+正常使用 `heroagent` 时，你主要通过自然语言或 `~动作` 触发，底层脚本应由 skill 自动选择和执行，而不是让你手动敲命令。
 
-这一步适合：
+### 示例一
 
-- 刚做完功能开发或重构
-- 刚改过接口、数据结构或模块边界
-- 不确定应该更新哪份 wiki
+你可以这样说：
 
-如果你已经明确要更新某个模块，也可以直接写入模块级 wiki：
+- `在这个老项目里初始化 heroagent`
+- `~init`
 
-```bash
-python3 scripts/update_wiki_context.py \
-  --module payments \
-  --content "## 新增说明\n\n- 支付模块负责统一收单与退款编排" \
-  /path/to/project
-```
+预期结果：
 
-如果你希望在代码变更后刷新整个 wiki 索引与新鲜度状态，可以执行：
+- 自动创建 `.heroagent/`
+- 自动补齐 `goals plans tasks progress wiki` 等目录
+- 若适合长期推进，再继续进入 `want`、`plan` 或 `todo`
 
-```bash
-python3 scripts/refresh_wiki_registry.py \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --changed-path prisma/schema.prisma \
-  --materialize-suggestions \
-  /path/to/project
-```
+### 示例二
 
-如果你希望进一步根据代码变更自动生成待补写草稿，可以执行：
+你可以这样说：
 
-```bash
-python3 scripts/sync_wiki_from_changes.py \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --changed-path prisma/schema.prisma \
-  --materialize-suggestions \
-  /path/to/project
-```
+- `帮我更新这个项目的 wiki`
+- `把支付模块的知识补到 wiki`
+- `~wiki`
 
-它不会直接改正文，而是先在 `.heroagent/wiki/drafts/` 里生成候选草稿，适合 AI 继续完善。
+预期结果：
 
-如果你确认某份草稿已经可以并入正式 wiki，可以执行：
+- 自动判断应更新 `overview arch api data modules` 中的哪些文件
+- 必要时自动生成草稿、刷新索引和注册表
+- 若你给出的信息已经够明确，会直接写回正式 wiki
 
-```bash
-python3 scripts/apply_wiki_draft.py \
-  modules__payments.md \
-  /path/to/project
-```
+### 示例三
 
-它会把草稿内容追加到对应正式 wiki，并自动刷新 `index.md` 与 `registry.json`。默认会删除已应用草稿，如需保留可加 `--keep-draft`。
+你可以这样说：
 
-如果你希望周期性检查 wiki 的维护状态，可以执行：
+- `我刚改了支付模块、订单路由和 prisma，帮我同步 wiki`
+- `根据这些变更整理知识库`
 
-```bash
-python3 scripts/reconcile_wiki_state.py \
-  --changed-path src/payments/service.ts \
-  --changed-path prisma/schema.prisma \
-  --stale-days 7 \
-  /path/to/project
-```
+预期结果：
 
-它会在 `.heroagent/wiki/drafts/maintenance-report.md` 里写出维护报告，说明：
+- 自动推导应同步哪些 wiki
+- 自动生成待补写草稿
+- 自动提炼一部分更稳定的源码事实
+- 根据当前策略决定是否直接合并、是否压缩旧补充块
 
-- 哪些目标 wiki 还没生成草稿
-- 哪些草稿已经陈旧
-- 哪些草稿可以直接合并
+### 示例四
 
-如果你希望按策略自动收敛这些维护债务，可以执行：
+你可以这样说：
 
-```bash
-python3 scripts/promote_wiki_maintenance.py \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --materialize-missing \
-  --apply-ready \
-  --mark-stale \
-  /path/to/project
-```
+- `现在最值得先维护哪些 wiki`
+- `给我装配 todo 需要的上下文`
+- `帮我检查一下 wiki 维护债务`
 
-它会：
+预期结果：
 
-- 为缺失目标自动补生成草稿
-- 把可合并草稿并入正式 wiki
-- 给陈旧草稿追加陈旧标记
-- 最后刷新索引和注册表
+- 自动给 wiki 打信号分并排序
+- 自动挑选当前动作最适合的上下文包
+- 自动输出缺失草稿、陈旧草稿、可合并草稿等维护结论
 
-如果正式 wiki 因多次自动补充变得过长，可以执行：
+### 示例五
 
-```bash
-python3 scripts/compact_wiki_memory.py \
-  --scope all \
-  /path/to/project
-```
+你可以这样说：
 
-它会把多个 `自动同步补充` 压成一个 `自动同步摘要`，更适合 AI 快速读取。
+- `用保守模式处理这轮 wiki`
+- `用平衡策略跑一轮知识库维护`
+- `用激进策略把 wiki 自动收口`
 
-如果你希望知道当前最值得优先维护或优先读取的 wiki，可以执行：
+预期结果：
 
-```bash
-python3 scripts/score_wiki_signals.py \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --top 5 \
-  /path/to/project
-```
+- `conservative`：只刷新状态和索引，不主动高侵入更新
+- `balanced`：补草稿、标记陈旧、提炼事实，但不自动合并正式 wiki
+- `aggressive`：补草稿、合并正文、提炼事实、压缩噪音一起执行
 
-它会输出每份 wiki 的信号分，包括：
+## 常用案例
 
-- `priority`
-- `freshness`
-- `density`
-- `draft_dependency`
+### 老项目接管
 
-如果你希望根据当前动作直接装配可用的 wiki 上下文包，可以执行：
+你可以这样说：
 
-```bash
-python3 scripts/assemble_wiki_context.py \
-  todo \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --limit 5 \
-  /path/to/project
-```
+- `帮我接管这个老项目，先初始化 heroagent`
 
-它会按动作语义、信号分和文档类型，自动挑选最适合的 wiki 子集。
+典型结果：
 
-如果你希望从代码变更里直接提炼更稳定的知识线索，可以执行：
+- 自动创建 `.heroagent/`
+- 自动补齐基础目录和 wiki
+- 自动把后续动作收敛到 `want` 或 `plan`
 
-```bash
-python3 scripts/extract_wiki_facts.py \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --changed-path prisma/schema.prisma \
-  /path/to/project
-```
+### 新需求启动
 
-它会在 `wiki/drafts/` 下生成 `facts__*.md`，用于沉淀更稳定的源码事实，而不只是生成通用草稿。
+你可以这样说：
 
-如果你希望按统一策略来运行整套 wiki 自动维护，可以执行：
+- `我想把订单退款流程规范起来，先帮我定目标`
+- `~want`
 
-```bash
-python3 scripts/run_wiki_strategy.py \
-  balanced \
-  --changed-path src/payments/service.ts \
-  --changed-path src/api/routes/orders.ts \
-  --changed-path prisma/schema.prisma \
-  /path/to/project
-```
+典型结果：
 
-当前支持 3 种策略：
+- 先做目标完整度评分
+- 若信息不足，进入目标澄清
+- 若信息足够，输出正式目标卡片
 
-- `conservative`
-  只刷新索引和状态，不主动做高侵入动作
-- `balanced`
-  自动补草稿、标记陈旧草稿、提炼源码事实，但不自动合并正式 wiki
-- `aggressive`
-  自动补草稿、自动合并、自动提炼事实、自动压缩正式 wiki
+### 目标拆计划
+
+你可以这样说：
+
+- `目标已经明确了，帮我拆一个两周计划`
+- `~plan`
+
+典型结果：
+
+- 输出阶段路径
+- 标出关键依赖与风险
+- 给出每个阶段的完成标志
+
+### 计划拆任务
+
+你可以这样说：
+
+- `把这个计划拆成可执行 todo`
+- `~todo`
+
+典型结果：
+
+- 输出动作化任务清单
+- 每项任务带完成定义和依赖
+- 优先结合模块、API、数据约束来拆解
+
+### 当前进度聚焦
+
+你可以这样说：
+
+- `我现在最该盯什么`
+- `~focus`
+
+典型结果：
+
+- 汇总当前目标、阶段、阻塞、下一步
+- 优先消费 `wiki` 和 `current-focus.md`
+- 不重复无关历史
+
+### 代码变更同步知识库
+
+你可以这样说：
+
+- `我刚改了支付模块和订单接口，帮我同步 wiki`
+- `根据这轮改动更新知识库`
+
+典型结果：
+
+- 自动识别应更新哪些 wiki
+- 自动生成待补写草稿
+- 必要时补充源码事实草稿
+
+### 知识库巡检
+
+你可以这样说：
+
+- `帮我检查一下 wiki 现在的维护状态`
+- `看看哪些知识已经陈旧`
+
+典型结果：
+
+- 输出缺失草稿、陈旧草稿、可合并草稿
+- 说明当前最值得优先维护的文档
+- 必要时建议采用保守、平衡或激进策略
+
+### 任务收口与验收
+
+你可以这样说：
+
+- `这个任务做完了，帮我更新状态`
+- `现在算达成了吗`
+- `~finish`
+- `~achieve`
+
+典型结果：
+
+- `finish` 更新任务完成证据和推进影响
+- `achieve` 从目标层面判断是否真正闭环
+
+### 问题复盘与沉淀
+
+你可以这样说：
+
+- `这次延期为什么发生，帮我复盘`
+- `把这次经验提炼成原则`
+- `把这套方法沉淀成流程`
+
+典型结果：
+
+- `reflect` 拆现象、影响、根因
+- `realize` 提炼可迁移原则
+- `master` 固化稳定流程
+
+## 手动调试
+
+上面的动作本来应该由 skill 自动触发。  
+只有在你要调试、批处理、验证单个能力时，才建议直接运行 `scripts/*.py`。
 
 ### 显式指令
 
