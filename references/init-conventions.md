@@ -25,7 +25,6 @@
 ├── progress/
 ├── retros/
 ├── principles/
-├── processes/
 └── archive/
 ```
 
@@ -39,7 +38,6 @@
 - `.heroagent/progress/.gitkeep`
 - `.heroagent/retros/.gitkeep`
 - `.heroagent/principles/.gitkeep`
-- `.heroagent/processes/.gitkeep`
 - `.heroagent/archive/.gitkeep`
 
 ## 可选启动文件
@@ -72,6 +70,12 @@
 ├── plans/
 ├── tasks/
 └── progress/
+```
+
+若后续进入 `master` 或流程沉淀场景，再按需创建：
+
+```text
+.heroagent/processes/
 ```
 
 ## 初始化后的推荐第一步

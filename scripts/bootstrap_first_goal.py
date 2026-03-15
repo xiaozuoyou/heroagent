@@ -18,8 +18,10 @@ from common import timestamp_now
 def goal_card(goal_title: str) -> str:
     return render_template(
         "goal-card.md",
-        fields={"目标": goal_title},
-        next_step="补全目标边界与成功标准",
+        fields={
+            "目标": goal_title,
+            "成功标准": "",
+        },
     )
 
 

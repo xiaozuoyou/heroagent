@@ -19,14 +19,13 @@
 | `wiki` | `.heroagent/wiki/` | 是 | 无，显式命中时直接处理 |
 | `want` | `goals/`、`workflow-state.json` | 否 | 需求边界被明确改写为项目级事实 |
 | `plan` | `plans/`、`current-focus.md` | 否 | 已明确调整架构约束、接口策略或数据边界 |
-| `todo` | `tasks/`、`current-focus.md` | 否 | 任务拆解时已经确认稳定技术事实 |
+| `todo` | `tasks/`、`current-focus.md`、完成状态 | 否 | 任务拆解时已经确认稳定技术事实 |
 | `focus` | `current-focus.md` | 否 | 本轮同时确认了新的项目事实 |
-| `finish` | `tasks/`、`current-focus.md` | 是 | 若只是状态回报且无实际改动，可跳过 |
 | `achieve` | `goals/`、`progress/`、归档信息 | 是 | 若确认没有项目事实变化，可只做收口 |
 | `abandon` | `goals/`、`progress/`、归档信息 | 否 | 放弃动作本身通常不改 wiki |
 | `reflect` | `retros/` | 否 | 复盘中顺带确认稳定项目事实时 |
 | `realize` | `principles/` | 否 | 原则本身通常不进入 wiki |
-| `master` | `processes/` | 否 | 流程固化改变项目级协作事实时 |
+| `master` | `processes/` 按需创建 | 否 | 流程固化改变项目级协作事实时 |
 | `synthesize` | `principles/`、`processes/`、`progress/` | 否 | 教学稿本身通常不进入 wiki |
 | `forget` | `principles/`、`processes/`、`retros/` | 否 | 若淘汰的是项目级旧约束，可补一次 detect |
 
@@ -40,7 +39,7 @@
 
 ### 执行动作
 
-- `finish` 前，如果本轮已经产生代码变更，优先做一次 wiki `detect`
+- `todo` 全部完成后，先更新完成状态，再准备进入 `achieve`
 - `achieve` 前，优先检查是否仍存在 `pending_wiki_targets`
 - 若存在待同步项，不要把“任务完成”误当成“知识已同步”
 
@@ -56,7 +55,7 @@
 1. 先更新动作本身的主对象
 2. 再判断是否产生了项目事实变化
 3. 若产生事实变化，标记 `wiki_status = needs_sync`
-4. 到 `finish`、`achieve` 或显式 `wiki` 时，再决定是否正式同步
+4. 到 `achieve` 或显式 `wiki` 时，再决定是否正式同步
 
 ## 常见误区
 

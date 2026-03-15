@@ -16,7 +16,7 @@
 ├── progress/
 ├── retros/
 ├── principles/
-└── processes/
+└── archive/
 ```
 
 如果目标项目尚未创建 `.heroagent/`，且用户明确需要落盘，则先创建该目录结构。
@@ -78,18 +78,6 @@
 建议内容：
 
 - 使用 `assets/templates/progress-snapshot.md`
-
-### `finish`
-
-建议目录：
-
-- 优先更新对应 `tasks/` 文件
-- 如需单独记录，可追加到 `.heroagent/progress/`
-
-建议规则：
-
-- 已完成任务优先原地更新状态
-- 若产生重要决策，再单独生成进度快照
 
 ### `achieve`
 
@@ -156,6 +144,11 @@
 
 - 使用 `assets/templates/process-card.md`
 
+建议规则：
+
+- `processes/` 可按需创建，不要求初始化时默认存在
+- 只有在确实沉淀稳定流程时再创建该目录
+
 ### `synthesize`
 
 建议目录：
@@ -206,5 +199,6 @@
 - 原目标
 - 最终计划
 - 最终任务状态
+- 与目标相关的进度快照、完成记录、验收结论
 - 达成结论或放弃结论
 - 相关复盘与原则

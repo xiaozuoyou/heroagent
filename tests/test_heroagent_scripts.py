@@ -18,7 +18,6 @@ EXPECTED_ACTIONS = {
     "plan",
     "todo",
     "focus",
-    "finish",
     "achieve",
     "abandon",
     "reflect",
@@ -60,6 +59,7 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertTrue((root / "goals").is_dir())
             self.assertTrue((root / "progress" / "current-focus.md").exists())
             self.assertTrue((root / "README.md").exists())
+            self.assertFalse((root / "processes").exists())
             self.assertTrue((root / "wiki" / "index.md").exists())
             self.assertTrue((root / "wiki" / "registry.json").exists())
             self.assertTrue((root / "wiki" / "overview.md").exists())
@@ -226,6 +226,8 @@ class HeroAgentScriptsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             run_script("bootstrap_first_goal.py", "规范团队周报流程", tmpdir, "--refresh-focus")
             slug = "goal-d348d219"
+            progress_note = Path(tmpdir) / ".heroagent" / "progress" / f"202603151200_{slug}.md"
+            progress_note.write_text("# 验收结论\n\n- 已完成验收\n", encoding="utf-8")
 
             result = run_script("archive_goal.py", "--slug", slug, "--reset-focus", tmpdir)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -236,6 +238,8 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertTrue((archive_dir / f"goals__{archive_dir.name}.md").exists())
             self.assertTrue((archive_dir / f"plans__{archive_dir.name}.md").exists())
             self.assertTrue((archive_dir / f"tasks__{archive_dir.name}.md").exists())
+            self.assertTrue((archive_dir / f"progress__{progress_note.name}").exists())
+            self.assertFalse(progress_note.exists())
 
             focus = (Path(tmpdir) / ".heroagent" / "progress" / "current-focus.md").read_text(
                 encoding="utf-8"

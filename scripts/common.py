@@ -21,7 +21,6 @@ REQUIRED_DIRS = [
     "progress",
     "retros",
     "principles",
-    "processes",
     "archive",
     "wiki",
     "wiki/drafts",
@@ -44,7 +43,6 @@ This workspace stores goal execution artifacts for HeroAgent.
 - progress: progress snapshots and current focus
 - retros: retrospectives
 - principles: reusable principles
-- processes: reusable workflows
 - archive: closed or abandoned work
 - wiki: reusable project knowledge and context
 """
@@ -352,6 +350,7 @@ def touch_if_missing(path: Path) -> None:
 
 
 def safe_write(path: Path, content: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         path.write_text(content, encoding="utf-8")
         return path

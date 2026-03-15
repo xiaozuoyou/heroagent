@@ -39,6 +39,14 @@ def maybe_move(path: Path, archive_dir: Path, folder: str, moved: list[Path]) ->
     moved.append(destination)
 
 
+def is_archivable_progress(path: Path, slug: str) -> bool:
+    if path.name in {"current-focus.md", "workflow-state.json", ".gitkeep"}:
+        return False
+    if path.suffix != ".md":
+        return False
+    return slug in path.name
+
+
 def reset_current_focus(path: Path) -> None:
     path.write_text(render_blank_focus(), encoding="utf-8")
 
@@ -78,6 +86,10 @@ def main() -> int:
     for folder in ("goals", "plans", "tasks", "retros"):
         for path in (workspace / folder).glob(f"*{args.slug}*.md"):
             maybe_move(path, archive_dir, folder, moved)
+
+    for path in sorted((workspace / "progress").glob("*.md")):
+        if is_archivable_progress(path, args.slug):
+            maybe_move(path, archive_dir, "progress", moved)
 
     focus_path = workspace / "progress" / "current-focus.md"
     if args.reset_focus:

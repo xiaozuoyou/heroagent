@@ -35,7 +35,7 @@ npx skills update
 HeroAgent 把日常工作拆成两条主闭环：
 
 - 初始化与知识：`init`、`wiki`
-- 推进闭环：`want -> plan -> todo -> focus -> finish -> achieve | abandon`
+- 推进闭环：`want -> plan -> todo -> focus -> achieve | abandon`
 - 沉淀闭环：`reflect -> realize -> master -> synthesize -> forget`
 
 这意味着它既能做“把事推进完”，也能做“把经验沉淀下来”。
@@ -48,7 +48,6 @@ HeroAgent 把日常工作拆成两条主闭环：
 - `plan`：把目标拆成阶段路径
 - `todo`：把路径落成可执行清单
 - `focus`：聚焦当前最重要的进展、阻塞和下一步
-- `finish`：更新任务完成证据
 - `achieve`：判断目标是否真正达成
 - `abandon`：在不值得继续时明确停损和收口
 
@@ -68,6 +67,8 @@ HeroAgent 支持在项目内维护 `.heroagent/` 工作区，包括：
 - `progress/current-focus.md`
 - `archive/`
 - `wiki/`
+
+其中 `processes/` 不是默认初始化目录，只在确实要沉淀稳定流程时按需创建。
 
 其中 `.heroagent/wiki/` 用于维护项目知识，包括：
 
@@ -92,11 +93,14 @@ HeroAgent 支持在项目内维护 `.heroagent/` 工作区，包括：
 - `目标已经明确了，帮我拆一个两周计划`
 - `把这个计划拆成可执行 todo`
 - `我现在最该盯什么`
-- `这个任务做完了，帮我更新状态`
+- `这批任务已经做完了，帮我看看现在能不能验收`
 - `现在算达成了吗`
 - `帮我复盘这次延期`
 - `把支付模块的知识补到 wiki`
 - `根据这轮改动同步 wiki`
+
+默认情况下，HeroAgent 会按优先级连续执行整批 `todo`，只有遇到关键取舍、高风险操作或外部阻塞时才会停下来确认。
+当整批 `todo` 完成后，HeroAgent 会先切到“已完成，待验收”的内部状态，再进入 `achieve` 判断是否真正收口。
 
 更完整的动作路由、输出规范和执行边界，请看：
 
@@ -156,7 +160,6 @@ HeroAgent 同时支持自然语言触发和显式指令触发。
 - `~plan`
 - `~todo`
 - `~focus`
-- `~finish`
 - `~achieve`
 - `~abandon`
 - `~reflect`
