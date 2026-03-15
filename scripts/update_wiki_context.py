@@ -8,7 +8,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from common import ensure_wiki_section_path
 from common import init_workspace
+from common import refresh_wiki_registry
 
 
 WIKI_FILES = {"overview", "arch", "api", "data"}
@@ -20,9 +22,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--section",
-        required=True,
         choices=sorted(WIKI_FILES),
-        help="Wiki section to update.",
+        help="Core wiki section to update.",
+    )
+    parser.add_argument(
+        "--module",
+        help="Module wiki to update under .heroagent/wiki/modules/<module>.md.",
     )
     parser.add_argument(
         "--content",
@@ -37,14 +42,24 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if not args.section and not args.module:
+        parser.error("one of --section or --module is required")
+    if args.section and args.module:
+        parser.error("--section and --module cannot be used together")
+
     target = Path(args.target).resolve()
     target.mkdir(parents=True, exist_ok=True)
     workspace = init_workspace(target, with_readme=True, with_current_focus=True)
 
-    path = workspace / "wiki" / f"{args.section}.md"
+    path = ensure_wiki_section_path(
+        workspace=workspace,
+        section=args.section,
+        module_name=args.module,
+    )
     existing = path.read_text(encoding="utf-8").rstrip()
     appended = f"{existing}\n\n{args.content.strip()}\n"
     path.write_text(appended, encoding="utf-8")
+    refresh_wiki_registry(workspace)
 
     print(f"Updated HeroAgent wiki: {path}")
     return 0

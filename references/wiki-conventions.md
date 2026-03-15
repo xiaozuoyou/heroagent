@@ -14,6 +14,9 @@
 
 ```text
 .heroagent/wiki/
+├── index.md
+├── registry.json
+├── drafts/
 ├── overview.md
 ├── arch.md
 ├── api.md
@@ -23,11 +26,20 @@
 
 ## 文件职责
 
+- `index.md`：AI 优先阅读的索引与状态摘要
+- `registry.json`：供 AI 或脚本消费的结构化元信息
+- `drafts/`：根据代码变更自动生成的待补写草稿
 - `overview.md`：项目目标、模块总览、当前重点
 - `arch.md`：架构设计、模块关系、技术约束
 - `api.md`：对外接口、集成边界、调用约定
 - `data.md`：核心实体、字段约束、数据流
 - `modules/*.md`：模块级补充知识
+
+模块级 wiki 建议按单模块单文件维护，例如：
+
+- `modules/payments.md`
+- `modules/auth.md`
+- `modules/reporting.md`
 
 ## 何时优先消费 wiki
 
@@ -48,12 +60,31 @@
 - API、数据模型、架构边界发生变化
 - 用户明确要求维护知识库
 
+若已知本轮变更路径，先参考 `references/wiki-sync-rules.md` 推导应更新的 wiki 文件，再做最小改动。
+
+若本轮还不适合直接改正文，先在 `wiki/drafts/` 生成待补写草稿，再由 AI 合并回正式 wiki。
+
+推荐闭环：
+
+1. 根据变更生成 `drafts/`
+2. AI 审阅并补强草稿
+3. 把确认后的草稿合并进正式 wiki
+4. 刷新 `index.md` 与 `registry.json`
+5. 定期生成维护报告，检查缺失草稿与陈旧草稿
+6. 按策略自动收敛维护债务
+7. 定期压缩正式 wiki 的重复补充块
+8. 通过信号评分决定维护优先级与上下文优先级
+9. 按动作装配最小可用上下文包
+10. 从代码变更中提炼更稳定的事实线索
+11. 用显式策略控制自动维护强度
+
 ## 消费顺序
 
 默认顺序：
 
-1. 先读 `.heroagent/wiki/`
-2. wiki 不足，再读 `.heroagent/progress/`、`goals/`、`plans/`
-3. 仍不足，再扫描代码或继续追问用户
+1. 先读 `wiki/index.md` 或 `wiki/registry.json`
+2. 再读 `.heroagent/wiki/` 中被索引标记为最相关的文件
+3. wiki 不足，再读 `.heroagent/progress/`、`goals/`、`plans/`
+4. 仍不足，再扫描代码或继续追问用户
 
 不要跳过 wiki 直接扫描代码。

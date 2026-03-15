@@ -12,6 +12,21 @@ from common import REQUIRED_DIRS
 from common import WORKSPACE_DIRNAME
 
 
+REQUIRED_WIKI_FILES = [
+    "index.md",
+    "registry.json",
+    "overview.md",
+    "arch.md",
+    "api.md",
+    "data.md",
+]
+
+OPTIONAL_WIKI_DIRS = [
+    "drafts",
+    "modules",
+]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Check whether a HeroAgent workspace is present and minimally healthy.",
@@ -49,6 +64,21 @@ def main() -> int:
     else:
         print(f"[MISS] {focus}")
         missing.append(focus)
+
+    for filename in REQUIRED_WIKI_FILES:
+        path = root / "wiki" / filename
+        if path.exists():
+            print(f"[OK] {path}")
+        else:
+            print(f"[MISS] {path}")
+            missing.append(path)
+
+    for dirname in OPTIONAL_WIKI_DIRS:
+        path = root / "wiki" / dirname
+        if path.exists() and path.is_dir():
+            print(f"[OK] {path}")
+        else:
+            print(f"[WARN] Optional directory missing: {path}")
 
     readme = root / "README.md"
     if readme.exists():

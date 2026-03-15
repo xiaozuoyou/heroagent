@@ -73,6 +73,7 @@
 
 - 若检测到 `wiki` 维护意图，优先直接执行 `scripts/update_wiki_context.py`
 - 若是在其他动作中需要上下文，优先消费 `.heroagent/wiki/`
+- 若本轮已知变更文件路径，先用 `scripts/suggest_wiki_updates.py` 推导应刷新的 wiki 文件，再决定是否补写
 
 不要误判为 `init` 的情况：
 

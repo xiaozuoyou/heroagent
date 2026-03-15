@@ -2,6 +2,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import os
 from pathlib import Path
 
 
@@ -32,6 +33,8 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertTrue((root / "goals").is_dir())
             self.assertTrue((root / "progress" / "current-focus.md").exists())
             self.assertTrue((root / "README.md").exists())
+            self.assertTrue((root / "wiki" / "index.md").exists())
+            self.assertTrue((root / "wiki" / "registry.json").exists())
             self.assertTrue((root / "wiki" / "overview.md").exists())
             self.assertTrue((root / "wiki" / "arch.md").exists())
             self.assertTrue((root / "wiki" / "api.md").exists())
@@ -114,6 +117,16 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(healthy.returncode, 0, healthy.stderr)
             self.assertIn("HEALTHY", healthy.stdout)
 
+    def test_doctor_reports_missing_wiki_core_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            api_doc = Path(tmpdir) / ".heroagent" / "wiki" / "api.md"
+            api_doc.unlink()
+
+            result = run_script("doctor_heroagent.py", tmpdir)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn(str(api_doc), result.stdout)
+
     def test_update_wiki_context_appends_content(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             run_script("init_heroagent.py", tmpdir)
@@ -131,12 +144,369 @@ class HeroAgentScriptsTest(unittest.TestCase):
                 encoding="utf-8"
             )
             self.assertIn("支付模块负责统一收单", content)
+            index_content = (Path(tmpdir) / ".heroagent" / "wiki" / "index.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("overview.md", index_content)
 
     def test_init_creates_wiki_modules_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             run_script("init_heroagent.py", tmpdir)
             modules_dir = Path(tmpdir) / ".heroagent" / "wiki" / "modules"
             self.assertTrue(modules_dir.is_dir())
+
+    def test_update_wiki_context_supports_module_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_wiki_context.py",
+                "--module",
+                "payments",
+                "--content",
+                "## 新增说明\n\n- 支付模块负责统一收单",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            module_doc = Path(tmpdir) / ".heroagent" / "wiki" / "modules" / "payments.md"
+            self.assertTrue(module_doc.exists())
+            self.assertIn("支付模块负责统一收单", module_doc.read_text(encoding="utf-8"))
+            registry = (Path(tmpdir) / ".heroagent" / "wiki" / "registry.json").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("modules/payments.md", registry)
+
+    def test_suggest_wiki_updates_returns_expected_targets(self) -> None:
+        result = run_script(
+            "suggest_wiki_updates.py",
+            "src/payments/service.ts",
+            "src/api/routes/orders.ts",
+            "prisma/schema.prisma",
+            "README.md",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+        self.assertIn("overview.md", result.stdout)
+        self.assertIn("api.md", result.stdout)
+        self.assertIn("data.md", result.stdout)
+        self.assertIn("modules/payments.md", result.stdout)
+
+    def test_suggest_wiki_updates_ignores_existing_wiki_paths(self) -> None:
+        result = run_script(
+            "suggest_wiki_updates.py",
+            ".heroagent/wiki/overview.md",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("No wiki updates suggested.", result.stdout)
+
+    def test_refresh_wiki_registry_marks_suggested_updates_and_materializes_module(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "refresh_wiki_registry.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--materialize-suggestions",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("modules/payments.md", result.stdout)
+            self.assertTrue(
+                (Path(tmpdir) / ".heroagent" / "wiki" / "modules" / "payments.md").exists()
+            )
+
+            index_content = (Path(tmpdir) / ".heroagent" / "wiki" / "index.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("needs_update", index_content)
+            self.assertIn("api.md", index_content)
+
+    def test_sync_wiki_from_changes_creates_drafts_and_refreshes_registry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "sync_wiki_from_changes.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "prisma/schema.prisma",
+                "--materialize-suggestions",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Created HeroAgent wiki sync drafts:", result.stdout)
+
+            drafts_dir = Path(tmpdir) / ".heroagent" / "wiki" / "drafts"
+            payment_draft = drafts_dir / "modules__payments.md"
+            data_draft = drafts_dir / "data.md"
+            self.assertTrue(payment_draft.exists())
+            self.assertTrue(data_draft.exists())
+            self.assertIn("payments", payment_draft.read_text(encoding="utf-8"))
+            self.assertIn("schema.prisma", data_draft.read_text(encoding="utf-8"))
+
+            registry = (Path(tmpdir) / ".heroagent" / "wiki" / "registry.json").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("draft", registry)
+            self.assertIn("drafts/modules__payments.md", registry)
+
+    def test_apply_wiki_draft_merges_into_target_and_removes_draft(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "sync_wiki_from_changes.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--materialize-suggestions",
+                tmpdir,
+            )
+
+            result = run_script(
+                "apply_wiki_draft.py",
+                "modules__payments.md",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            wiki_doc = Path(tmpdir) / ".heroagent" / "wiki" / "modules" / "payments.md"
+            self.assertIn("自动同步补充", wiki_doc.read_text(encoding="utf-8"))
+
+            draft_doc = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "modules__payments.md"
+            self.assertFalse(draft_doc.exists())
+
+            registry = (Path(tmpdir) / ".heroagent" / "wiki" / "registry.json").read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn("drafts/modules__payments.md", registry)
+
+    def test_reconcile_wiki_state_writes_maintenance_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "sync_wiki_from_changes.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                tmpdir,
+            )
+
+            draft_doc = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "modules__payments.md"
+            stale_timestamp = 1
+            os.utime(draft_doc, (stale_timestamp, stale_timestamp))
+
+            result = run_script(
+                "reconcile_wiki_state.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--stale-days",
+                "0",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            report = (
+                Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "maintenance-report.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("api.md", report)
+            self.assertIn("modules/payments.md", report)
+            self.assertIn("陈旧草稿", report)
+
+    def test_promote_wiki_maintenance_creates_missing_applies_ready_and_marks_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "sync_wiki_from_changes.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                tmpdir,
+            )
+
+            stale_draft = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "modules__payments.md"
+            stale_timestamp = 1
+            os.utime(stale_draft, (stale_timestamp, stale_timestamp))
+
+            result = run_script(
+                "promote_wiki_maintenance.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--stale-days",
+                "0",
+                "--materialize-missing",
+                "--apply-ready",
+                "--mark-stale",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            api_draft = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "api.md"
+            self.assertTrue(api_draft.exists())
+
+            stale_content = stale_draft.read_text(encoding="utf-8")
+            self.assertIn("陈旧标记", stale_content)
+
+            report = (
+                Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "maintenance-report.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("api.md", report)
+
+    def test_compact_wiki_memory_merges_multiple_auto_sync_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "update_wiki_context.py",
+                "--module",
+                "payments",
+                "--content",
+                "## 新增说明\n\n- 支付模块负责统一收单",
+                tmpdir,
+            )
+
+            module_doc = Path(tmpdir) / ".heroagent" / "wiki" / "modules" / "payments.md"
+            original = module_doc.read_text(encoding="utf-8")
+            module_doc.write_text(
+                original
+                + "\n## 自动同步补充 2026-03-15 12:00:00\n\n- 第一条补充\n"
+                + "\n## 自动同步补充 2026-03-15 12:05:00\n\n- 第二条补充\n",
+                encoding="utf-8",
+            )
+
+            result = run_script(
+                "compact_wiki_memory.py",
+                "--scope",
+                "modules",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            content = module_doc.read_text(encoding="utf-8")
+            self.assertIn("## 自动同步摘要", content)
+            self.assertIn("第一条补充", content)
+            self.assertIn("第二条补充", content)
+            self.assertNotIn("## 自动同步补充 2026-03-15 12:00:00", content)
+
+    def test_score_wiki_signals_outputs_priority_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "sync_wiki_from_changes.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                tmpdir,
+            )
+
+            result = run_script(
+                "score_wiki_signals.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--top",
+                "3",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Top HeroAgent wiki signals:", result.stdout)
+            self.assertIn("priority=", result.stdout)
+            self.assertIn("freshness=", result.stdout)
+
+            registry = (Path(tmpdir) / ".heroagent" / "wiki" / "registry.json").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn('"signals"', registry)
+            self.assertIn('"priority_score"', registry)
+
+    def test_assemble_wiki_context_returns_action_specific_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "update_wiki_context.py",
+                "--module",
+                "payments",
+                "--content",
+                "## 新增说明\n\n- 支付模块负责统一收单",
+                tmpdir,
+            )
+
+            result = run_script(
+                "assemble_wiki_context.py",
+                "todo",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--limit",
+                "4",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("HeroAgent wiki context bundle for todo:", result.stdout)
+            self.assertIn("modules/payments.md", result.stdout)
+            self.assertIn("api.md", result.stdout)
+
+    def test_extract_wiki_facts_generates_fact_drafts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "extract_wiki_facts.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--changed-path",
+                "prisma/schema.prisma",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Extracted HeroAgent wiki facts:", result.stdout)
+
+            drafts_dir = Path(tmpdir) / ".heroagent" / "wiki" / "drafts"
+            self.assertTrue((drafts_dir / "facts__modules__payments.md").exists())
+            self.assertTrue((drafts_dir / "facts__api.md").exists())
+            self.assertTrue((drafts_dir / "facts__data.md").exists())
+
+            content = (drafts_dir / "facts__api.md").read_text(encoding="utf-8")
+            self.assertIn("接口相关文件", content)
+            self.assertIn("src/api/routes/orders.ts", content)
+
+    def test_run_wiki_strategy_balanced_extracts_facts_and_marks_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "sync_wiki_from_changes.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                tmpdir,
+            )
+
+            stale_draft = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "modules__payments.md"
+            stale_timestamp = 1
+            os.utime(stale_draft, (stale_timestamp, stale_timestamp))
+
+            result = run_script(
+                "run_wiki_strategy.py",
+                "balanced",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                "--stale-days",
+                "0",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Ran HeroAgent wiki strategy: balanced", result.stdout)
+            self.assertIn("Extracted fact drafts:", result.stdout)
+
+            fact_draft = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "facts__api.md"
+            self.assertTrue(fact_draft.exists())
+            self.assertIn("陈旧标记", stale_draft.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
