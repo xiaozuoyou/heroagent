@@ -67,6 +67,26 @@
 
 如果无法回答，说明状态还没有收敛，需要先补事实。
 
+## Wiki 轻判断状态
+
+若项目启用了 `.heroagent/wiki/`，建议把 wiki 是否需要同步也视为流程状态的一部分。
+
+推荐至少维护以下字段：
+
+- `wiki_status`：`fresh` 或 `needs_sync`
+- `pending_wiki_targets`：当前待同步的 wiki 文件
+- `last_wiki_detected_at`：最近一次做轻判断的时间
+- `last_wiki_sync_at`：最近一次正式同步的时间
+
+推荐策略：
+
+- 默认在代码变更完成后再做低成本判断，标记是否 `needs_sync`
+- `want`、`plan`、`todo` 默认不触发 wiki 判断，它们优先维护目标、计划、任务状态
+- 到 `finish`、`achieve` 或显式 `wiki` 请求时，再检查是否需要正式同步
+- 若需求边界、架构约束或项目事实在讨论阶段被显式改写，也可以例外触发一次判断
+- 若本轮只生成草稿但未写回正式 wiki，状态仍应保持 `needs_sync`
+- 轻判断由 skill 内部自动触发，不要求用户手动执行脚本
+
 ## 常见错误
 
 - 把“愿望”直接当作“目标”

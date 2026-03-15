@@ -18,6 +18,7 @@ from common import extract_source_facts
 from common import init_workspace
 from common import is_stale_file
 from common import refresh_wiki_registry
+from common import refresh_workflow_wiki_state
 from common import render_extracted_facts
 from common import render_wiki_maintenance_report
 from common import resolve_wiki_strategy
@@ -162,6 +163,12 @@ def main() -> int:
     report_path.write_text(report, encoding="utf-8")
 
     refresh_wiki_registry(workspace, changed_paths=args.changed_paths)
+    refresh_workflow_wiki_state(
+        workspace,
+        changed_paths=args.changed_paths,
+        mark_synced=strategy["apply_ready"],
+        strategy=args.strategy if strategy["apply_ready"] else "",
+    )
 
     print(f"Ran HeroAgent wiki strategy: {args.strategy}")
     if created_drafts:

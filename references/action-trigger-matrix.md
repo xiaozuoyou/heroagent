@@ -1,0 +1,66 @@
+# 动作触发矩阵
+
+## 目的
+
+明确 `heroagent` 各动作默认更新什么对象、是否触发 wiki 判断，以及哪些情况属于例外，避免把工作流状态和项目事实混在一起维护。
+
+## 总体规则
+
+- `goals plans tasks progress` 主要记录工作流状态
+- `wiki` 主要记录项目事实，如模块职责、接口契约、数据结构、架构约束
+- 默认先更新工作流状态，再判断是否需要更新 wiki
+- 只有在代码或稳定项目事实发生变化时，才默认触发 wiki `detect`
+
+## 动作矩阵
+
+| 动作 | 默认更新对象 | 默认是否触发 wiki detect | 何时例外触发 wiki detect |
+| --- | --- | --- | --- |
+| `init` | `.heroagent/` 工作区、基础 wiki 骨架 | 否 | 无 |
+| `wiki` | `.heroagent/wiki/` | 是 | 无，显式命中时直接处理 |
+| `want` | `goals/`、`workflow-state.json` | 否 | 需求边界被明确改写为项目级事实 |
+| `plan` | `plans/`、`current-focus.md` | 否 | 已明确调整架构约束、接口策略或数据边界 |
+| `todo` | `tasks/`、`current-focus.md` | 否 | 任务拆解时已经确认稳定技术事实 |
+| `focus` | `current-focus.md` | 否 | 本轮同时确认了新的项目事实 |
+| `finish` | `tasks/`、`current-focus.md` | 是 | 若只是状态回报且无实际改动，可跳过 |
+| `achieve` | `goals/`、`progress/`、归档信息 | 是 | 若确认没有项目事实变化，可只做收口 |
+| `abandon` | `goals/`、`progress/`、归档信息 | 否 | 放弃动作本身通常不改 wiki |
+| `reflect` | `retros/` | 否 | 复盘中顺带确认稳定项目事实时 |
+| `realize` | `principles/` | 否 | 原则本身通常不进入 wiki |
+| `master` | `processes/` | 否 | 流程固化改变项目级协作事实时 |
+| `synthesize` | `principles/`、`processes/`、`progress/` | 否 | 教学稿本身通常不进入 wiki |
+| `forget` | `principles/`、`processes/`、`retros/` | 否 | 若淘汰的是项目级旧约束，可补一次 detect |
+
+## 推荐触发规则
+
+### 工作流动作
+
+- `want`、`plan`、`todo` 默认只维护工作流状态
+- 这些动作结束后，优先更新目标、计划、任务和当前焦点
+- 不要因为讨论内容变多，就默认触发 wiki 判断
+
+### 执行动作
+
+- `finish` 前，如果本轮已经产生代码变更，优先做一次 wiki `detect`
+- `achieve` 前，优先检查是否仍存在 `pending_wiki_targets`
+- 若存在待同步项，不要把“任务完成”误当成“知识已同步”
+
+### 知识动作
+
+- `wiki` 是唯一默认直接面向知识库的动作
+- 命中 `wiki` 时，不需要再问“要不要先 detect”，因为它本身就在处理知识维护
+
+## 最小联动建议
+
+推荐把动作结束后的联动理解成：
+
+1. 先更新动作本身的主对象
+2. 再判断是否产生了项目事实变化
+3. 若产生事实变化，标记 `wiki_status = needs_sync`
+4. 到 `finish`、`achieve` 或显式 `wiki` 时，再决定是否正式同步
+
+## 常见误区
+
+- 把 `todo` 清单变化误当成 wiki 变化
+- 把需求讨论变化误当成项目事实变化
+- 把草稿生成误当成正式同步完成
+- 把任务完成误当成目标达成，或误当成 wiki 已同步

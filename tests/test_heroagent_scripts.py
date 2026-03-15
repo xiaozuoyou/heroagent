@@ -4,12 +4,30 @@ import tempfile
 import unittest
 import os
 import json
+import re
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 PYTHON = sys.executable
+EXPECTED_ACTIONS = {
+    "init",
+    "wiki",
+    "want",
+    "plan",
+    "todo",
+    "focus",
+    "finish",
+    "achieve",
+    "abandon",
+    "reflect",
+    "realize",
+    "master",
+    "synthesize",
+    "forget",
+}
+INTERNAL_ONLY_SCRIPTS = {"update_wiki_signal_state.py"}
 
 
 def run_script(script_name: str, *args: str) -> subprocess.CompletedProcess[str]:
@@ -22,6 +40,14 @@ def run_script(script_name: str, *args: str) -> subprocess.CompletedProcess[str]
         env=env,
         check=False,
     )
+
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def extract_backticked_values(text: str, pattern: str) -> set[str]:
+    return set(re.findall(pattern, text))
 
 
 class HeroAgentScriptsTest(unittest.TestCase):
@@ -138,6 +164,63 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(state["stage_status"], "ready_for_plan")
             self.assertEqual(state["next_action"], "confirm_plan_handoff")
             self.assertEqual(state["pending_choice"], ["~plan", "continue_want", "defer"])
+
+    def test_update_wiki_signal_state_marks_pending_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_wiki_signal_state.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["wiki_status"], "needs_sync")
+            self.assertIn("modules/payments.md", state["pending_wiki_targets"])
+            self.assertIn("api.md", state["pending_wiki_targets"])
+            self.assertIn("Wiki status: needs_sync", result.stdout)
+
+    def test_update_wiki_signal_state_can_mark_targets_synced(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            run_script(
+                "update_wiki_signal_state.py",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                tmpdir,
+            )
+            result = run_script(
+                "update_wiki_signal_state.py",
+                "--mark-synced",
+                "--strategy",
+                "aggressive",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["wiki_status"], "fresh")
+            self.assertEqual(state["pending_wiki_targets"], [])
+            self.assertEqual(state["last_wiki_sync_strategy"], "aggressive")
+            self.assertIn("Recorded wiki sync strategy: aggressive", result.stdout)
 
     def test_archive_moves_goal_related_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -560,6 +643,91 @@ class HeroAgentScriptsTest(unittest.TestCase):
             fact_draft = Path(tmpdir) / ".heroagent" / "wiki" / "drafts" / "facts__api.md"
             self.assertTrue(fact_draft.exists())
             self.assertIn("陈旧标记", stale_draft.read_text(encoding="utf-8"))
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["wiki_status"], "needs_sync")
+            self.assertIn("api.md", state["pending_wiki_targets"])
+
+    def test_run_wiki_strategy_aggressive_marks_wiki_fresh(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "run_wiki_strategy.py",
+                "aggressive",
+                "--changed-path",
+                "src/payments/service.ts",
+                "--changed-path",
+                "src/api/routes/orders.ts",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["wiki_status"], "fresh")
+            self.assertEqual(state["pending_wiki_targets"], [])
+            self.assertEqual(state["last_wiki_sync_strategy"], "aggressive")
+
+
+class HeroAgentDocumentationTest(unittest.TestCase):
+    def test_skill_declares_all_actions(self) -> None:
+        skill_text = read_text(REPO_ROOT / "SKILL.md")
+        actions = extract_backticked_values(skill_text, r"`~([a-z]+)`")
+        self.assertEqual(actions, EXPECTED_ACTIONS)
+
+    def test_skill_references_existing_support_files(self) -> None:
+        skill_text = read_text(REPO_ROOT / "SKILL.md")
+        referenced_paths = extract_backticked_values(
+            skill_text,
+            r"`((?:references|assets/templates|scripts)/[^`]+)`",
+        )
+
+        for relative_path in referenced_paths:
+            with self.subTest(path=relative_path):
+                self.assertTrue((REPO_ROOT / relative_path).exists(), relative_path)
+
+    def test_readme_explicit_action_list_stays_complete(self) -> None:
+        readme_text = read_text(REPO_ROOT / "README.md")
+        match = re.search(
+            r"推荐显式指令：\s*(.*?)\n### 初始化指令",
+            readme_text,
+            re.S,
+        )
+        self.assertIsNotNone(match)
+        actions = extract_backticked_values(match.group(1), r"`~([a-z]+)`")
+        self.assertEqual(actions, EXPECTED_ACTIONS)
+
+    def test_readme_script_inventory_matches_repository(self) -> None:
+        readme_text = read_text(REPO_ROOT / "README.md")
+        match = re.search(
+            r"仓库内已经提供一组可执行脚本，主要用于调试、批处理和验证公开能力：\s*(.*?)\n## ",
+            readme_text,
+            re.S,
+        )
+        self.assertIsNotNone(match)
+        documented_scripts = extract_backticked_values(
+            match.group(1),
+            r"`scripts/([^`]+\.py)`",
+        )
+
+        actual_scripts = {
+            path.name
+            for path in SCRIPTS_DIR.glob("*.py")
+            if path.name != "common.py" and path.name not in INTERNAL_ONLY_SCRIPTS
+        }
+        self.assertEqual(documented_scripts, actual_scripts)
+
+    def test_readme_does_not_expose_internal_only_scripts(self) -> None:
+        readme_text = read_text(REPO_ROOT / "README.md")
+        for script_name in INTERNAL_ONLY_SCRIPTS:
+            self.assertNotIn(f"`scripts/{script_name}`", readme_text)
 
 
 if __name__ == "__main__":

@@ -57,6 +57,13 @@ WORKFLOW_STATE_CONTENT = """{
   "pending_choice": [],
   "latest_score": 0,
   "current_question": "",
+  "wiki_status": "fresh",
+  "pending_wiki_targets": [],
+  "last_wiki_detected_at": "",
+  "last_wiki_detected_paths": [],
+  "last_wiki_sync_at": "",
+  "last_wiki_sync_strategy": "",
+  "last_wiki_sync_paths": [],
   "updated_at": ""
 }
 """
@@ -453,6 +460,13 @@ def blank_workflow_state() -> dict[str, object]:
         "pending_choice": [],
         "latest_score": 0,
         "current_question": "",
+        "wiki_status": "fresh",
+        "pending_wiki_targets": [],
+        "last_wiki_detected_at": "",
+        "last_wiki_detected_paths": [],
+        "last_wiki_sync_at": "",
+        "last_wiki_sync_strategy": "",
+        "last_wiki_sync_paths": [],
         "updated_at": "",
     }
 
@@ -462,7 +476,9 @@ def load_workflow_state(workspace: Path) -> dict[str, object]:
     if not path.exists():
         path.write_text(WORKFLOW_STATE_CONTENT, encoding="utf-8")
         return blank_workflow_state()
-    return json.loads(path.read_text(encoding="utf-8"))
+    state = blank_workflow_state()
+    state.update(json.loads(path.read_text(encoding="utf-8")))
+    return state
 
 
 def save_workflow_state(workspace: Path, state: dict[str, object]) -> Path:
@@ -471,6 +487,42 @@ def save_workflow_state(workspace: Path, state: dict[str, object]) -> Path:
     state["updated_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+def refresh_workflow_wiki_state(
+    workspace: Path,
+    changed_paths: list[str] | None = None,
+    *,
+    mark_synced: bool = False,
+    strategy: str = "",
+) -> tuple[Path, dict[str, object]]:
+    changed_paths = changed_paths or []
+    state = load_workflow_state(workspace)
+    current_pending = {
+        str(item)
+        for item in state.get("pending_wiki_targets", [])
+        if isinstance(item, str) and item
+    }
+    suggested_targets = set(suggest_wiki_targets(changed_paths))
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    if changed_paths:
+        state["last_wiki_detected_at"] = now
+        state["last_wiki_detected_paths"] = changed_paths
+
+    if mark_synced:
+        resolved_targets = suggested_targets or current_pending
+        pending_targets = sorted(current_pending - resolved_targets)
+        state["last_wiki_sync_at"] = now
+        state["last_wiki_sync_strategy"] = strategy
+        state["last_wiki_sync_paths"] = changed_paths
+    else:
+        pending_targets = sorted(current_pending | suggested_targets)
+
+    state["pending_wiki_targets"] = pending_targets
+    state["wiki_status"] = "needs_sync" if pending_targets else "fresh"
+    path = save_workflow_state(workspace, state)
+    return path, state
 
 
 def split_path_parts(raw_path: str) -> list[str]:
