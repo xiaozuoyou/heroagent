@@ -4,3 +4,4 @@ interface:
   default_prompt: "使用 $heroagent 把一个模糊意图收敛为明确目标、阶段计划、可执行任务、进度结论和可复用经验。"
   icon_small: "assets/heroagent-icon.png"
   icon_large: "assets/heroagent-icon.png"
+  brand_color: "#3B82F6"
