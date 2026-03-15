@@ -423,8 +423,6 @@ python3 scripts/archive_goal.py --slug goal-d348d219 --reset-focus /path/to/proj
 💡 HeroAgent · 咨询问答
 ```
 
-不再要求单独输出 `[HeroAgent]`。
-
 ## 仓库结构
 
 ```text

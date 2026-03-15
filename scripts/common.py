@@ -49,6 +49,18 @@ This workspace stores goal execution artifacts for HeroAgent.
 - wiki: reusable project knowledge and context
 """
 
+WORKFLOW_STATE_CONTENT = """{
+  "current_goal": "",
+  "current_stage": "",
+  "stage_status": "",
+  "next_action": "",
+  "pending_choice": [],
+  "latest_score": 0,
+  "current_question": "",
+  "updated_at": ""
+}
+"""
+
 WIKI_OVERVIEW_CONTENT = """# 项目概览
 
 ## 目标
@@ -417,6 +429,7 @@ def init_workspace(target: Path, with_readme: bool, with_current_focus: bool) ->
 
     if with_current_focus:
         write_if_missing(root / "progress" / "current-focus.md", render_blank_focus())
+    write_if_missing(root / "progress" / "workflow-state.json", WORKFLOW_STATE_CONTENT)
 
     write_if_missing(root / "wiki" / "overview.md", WIKI_OVERVIEW_CONTENT)
     write_if_missing(root / "wiki" / "arch.md", WIKI_ARCH_CONTENT)
@@ -429,6 +442,35 @@ def init_workspace(target: Path, with_readme: bool, with_current_focus: bool) ->
         refresh_wiki_registry(root)
 
     return root
+
+
+def blank_workflow_state() -> dict[str, object]:
+    return {
+        "current_goal": "",
+        "current_stage": "",
+        "stage_status": "",
+        "next_action": "",
+        "pending_choice": [],
+        "latest_score": 0,
+        "current_question": "",
+        "updated_at": "",
+    }
+
+
+def load_workflow_state(workspace: Path) -> dict[str, object]:
+    path = workspace / "progress" / "workflow-state.json"
+    if not path.exists():
+        path.write_text(WORKFLOW_STATE_CONTENT, encoding="utf-8")
+        return blank_workflow_state()
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save_workflow_state(workspace: Path, state: dict[str, object]) -> Path:
+    path = workspace / "progress" / "workflow-state.json"
+    state = dict(state)
+    state["updated_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
 
 
 def split_path_parts(raw_path: str) -> list[str]:

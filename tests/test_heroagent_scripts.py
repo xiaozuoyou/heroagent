@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 import os
+import json
 from pathlib import Path
 
 
@@ -85,6 +86,58 @@ class HeroAgentScriptsTest(unittest.TestCase):
             )
             self.assertIn("当前目标：规范团队周报流程", content)
             self.assertIn("下一步：完成任务拆解", content)
+
+    def test_update_want_state_clarifying(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_want_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "clarifying",
+                "--score",
+                "6",
+                "--question",
+                "你这次最想达成的结果是什么",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["current_stage"], "want")
+            self.assertEqual(state["stage_status"], "clarifying")
+            self.assertEqual(state["next_action"], "answer_current_question")
+            self.assertEqual(state["latest_score"], 6)
+            self.assertEqual(state["current_question"], "你这次最想达成的结果是什么")
+
+    def test_update_want_state_ready_for_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_want_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "ready_for_plan",
+                "--score",
+                "8",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["stage_status"], "ready_for_plan")
+            self.assertEqual(state["next_action"], "confirm_plan_handoff")
+            self.assertEqual(state["pending_choice"], ["~plan", "continue_want", "defer"])
 
     def test_archive_moves_goal_related_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
