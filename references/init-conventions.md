@@ -72,7 +72,7 @@
 └── progress/
 ```
 
-若后续进入 `master` 或流程沉淀场景，再按需创建：
+若后续进入流程标准沉淀场景，再按需创建：
 
 ```text
 .heroagent/processes/

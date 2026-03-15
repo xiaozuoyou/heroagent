@@ -1,12 +1,12 @@
 # HeroAgent
 
-HeroAgent 是一个帮你定目标、拆计划、管进度、沉淀知识的工作流 skill。
+HeroAgent 是一个帮你定目标、拆计划、推进任务、验收结果、复盘问题并维护知识的工作流 skill。
 
 它适合处理三类问题：
 
 - 把模糊意图收敛为明确目标、计划和任务
-- 在多轮推进中维护当前焦点、完成记录和验收结论
-- 把项目知识、复盘结论、原则和流程沉淀下来
+- 在多轮推进中维护当前状态、完成记录和验收结论
+- 把项目知识、复盘结论和流程标准沉淀下来
 
 如果你只是在做一次性编码、修 bug 或临时问答，而不需要目标推进或知识沉淀，通常不需要使用 HeroAgent。
 
@@ -32,13 +32,19 @@ npx skills update
 
 ## 它解决什么问题
 
-HeroAgent 把日常工作拆成两条主闭环：
+HeroAgent 把日常工作拆成三层：
 
 - 初始化与知识：`init`、`wiki`
-- 推进闭环：`want -> plan -> todo -> focus -> achieve | abandon`
-- 沉淀闭环：`reflect -> realize -> master -> synthesize -> forget`
+- 目标推进：`want -> plan -> todo -> achieve | abandon`
+- 状态观察：`focus`
+- 问题复盘：`reflect`
 
-这意味着它既能做“把事推进完”，也能做“把经验沉淀下来”。
+另外还有一组内部沉淀方法：
+
+- `realize`：把确认过的复盘结论写成原则
+- `synthesize`：压缩长记录、提炼一句话经验、合并重复知识
+- `forget`：淘汰旧知识、旧需求结论和失效约束
+- `master`：固化 HeroAgent 或项目级执行标准
 
 ## 核心能力
 
@@ -47,17 +53,20 @@ HeroAgent 把日常工作拆成两条主闭环：
 - `want`：把模糊意图收敛为明确目标
 - `plan`：把目标拆成阶段路径
 - `todo`：把路径落成可执行清单
-- `focus`：聚焦当前最重要的进展、阻塞和下一步
+- `focus`：查看当前最重要的进展、阻塞和下一步
 - `achieve`：判断目标是否真正达成
 - `abandon`：在不值得继续时明确停损和收口
 
-### 认知沉淀
+### 问题复盘
 
-- `reflect`：复盘问题和根因
-- `realize`：提炼可迁移原则
-- `master`：把稳定做法沉淀成流程
-- `synthesize`：把知识讲清楚、教出去
-- `forget`：淘汰过时规则和旧认知
+- `reflect`：基于材料复盘问题和根因
+
+### 内部沉淀方法
+
+- `realize`：仅在 `reflect` 结论被确认后使用
+- `synthesize`：作为 `wiki` 的压缩整理方法使用
+- `forget`：作为 `wiki` 的淘汰清理方法使用
+- `master`：作为流程标准沉淀使用，不是常规用户动作
 
 ### 工作区与知识库
 
@@ -81,7 +90,7 @@ HeroAgent 支持在项目内维护 `.heroagent/` 工作区，包括：
 - `registry.json`
 - `drafts/`
 
-在 `want`、`plan`、`todo`、`focus`、`reflect` 等动作里，如果 wiki 已存在，HeroAgent 应优先消费它，而不是重新从零扫描项目。
+在 `want`、`plan`、`todo`、`focus`、`reflect` 等动作里，如果 wiki 已存在，HeroAgent 应优先消费它，而不是重新从零扫描项目。`reflect` 还应优先读取当前目标材料或归档材料，wiki 只负责补结构背景，不替代事件证据。
 
 ## 如何使用
 
@@ -101,6 +110,7 @@ HeroAgent 支持在项目内维护 `.heroagent/` 工作区，包括：
 
 默认情况下，HeroAgent 会按优先级连续执行整批 `todo`，只有遇到关键取舍、高风险操作或外部阻塞时才会停下来确认。
 当整批 `todo` 完成后，HeroAgent 会先切到“已完成，待验收”的内部状态，再进入 `achieve` 判断是否真正收口。
+如果过程中出现明显问题、返工或判断偏差，HeroAgent 应先用 `reflect` 复盘；复盘结论被确认后，再内部执行 `realize` 沉淀经验。
 
 更完整的动作路由、输出规范和执行边界，请看：
 
@@ -140,7 +150,7 @@ HeroAgent 支持在项目内维护 `.heroagent/` 工作区，包括：
 
 1. 初始化工作区
 2. 生成首批目标文件
-3. 持续更新当前焦点
+3. 持续更新当前状态快照
 4. 维护 wiki
 5. 完成后归档
 
@@ -163,10 +173,6 @@ HeroAgent 同时支持自然语言触发和显式指令触发。
 - `~achieve`
 - `~abandon`
 - `~reflect`
-- `~realize`
-- `~master`
-- `~synthesize`
-- `~forget`
 
 规则是：
 

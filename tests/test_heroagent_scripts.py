@@ -21,10 +21,6 @@ EXPECTED_ACTIONS = {
     "achieve",
     "abandon",
     "reflect",
-    "realize",
-    "master",
-    "synthesize",
-    "forget",
 }
 INTERNAL_ONLY_SCRIPTS = {"update_wiki_signal_state.py"}
 
@@ -66,6 +62,37 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertTrue((root / "wiki" / "arch.md").exists())
             self.assertTrue((root / "wiki" / "api.md").exists())
             self.assertTrue((root / "wiki" / "data.md").exists())
+
+    def test_init_readme_uses_new_workflow_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = run_script("init_heroagent.py", tmpdir)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            readme = (Path(tmpdir) / ".heroagent" / "README.md").read_text(encoding="utf-8")
+            self.assertIn("公开动作", readme)
+            self.assertIn("内部方法", readme)
+            self.assertIn("want -> plan -> todo -> achieve | abandon", readme)
+            self.assertIn("`focus`：当前态势观察动作", readme)
+            self.assertIn("`reflect`：问题复盘入口", readme)
+
+    def test_init_workflow_state_includes_reflect_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = run_script("init_heroagent.py", tmpdir)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["reflect_status"], "")
+            self.assertEqual(state["pending_reflect_reason"], "")
+            self.assertFalse(state["pending_realize"])
+            self.assertEqual(state["last_reflect_at"], "")
+            self.assertEqual(state["last_realize_at"], "")
+            self.assertEqual(state["current_object"], "")
+            self.assertEqual(state["workflow_mode"], "")
+            self.assertEqual(state["complexity_level"], "")
 
     def test_bootstrap_creates_seed_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -135,7 +162,10 @@ class HeroAgentScriptsTest(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertEqual(state["current_stage"], "want")
+            self.assertEqual(state["current_object"], "goal")
+            self.assertEqual(state["current_stage"], "clarify")
+            self.assertEqual(state["workflow_mode"], "interactive")
+            self.assertEqual(state["complexity_level"], "standard")
             self.assertEqual(state["stage_status"], "clarifying")
             self.assertEqual(state["next_action"], "answer_current_question")
             self.assertEqual(state["latest_score"], 6)

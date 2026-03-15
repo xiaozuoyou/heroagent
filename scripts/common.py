@@ -33,28 +33,50 @@ TEMPLATES_DIR = REPO_ROOT / "assets" / "templates"
 
 README_CONTENT = """# .heroagent
 
-This workspace stores goal execution artifacts for HeroAgent.
+这个工作区用于维护目标推进、问题复盘和项目知识。
 
-## Directories
+## 公开动作
 
-- goals: goal cards
-- plans: milestone plans
-- tasks: executable task lists
-- progress: progress snapshots and current focus
-- retros: retrospectives
-- principles: reusable principles
-- archive: closed or abandoned work
-- wiki: reusable project knowledge and context
+- `want -> plan -> todo -> achieve | abandon`：目标推进主流程
+- `focus`：当前态势观察动作
+- `wiki`：知识维护与知识消费入口
+- `reflect`：问题复盘入口
+
+## 内部方法
+
+- `realize`：复盘结论确认后，沉淀到 `principles/`
+- `synthesize`：压缩长记录、提炼一句话经验
+- `forget`：淘汰旧知识、旧需求结论和失效约束
+- `master`：沉淀项目级或 HeroAgent 级执行标准
+
+## 目录说明
+
+- `goals/`：目标卡
+- `plans/`：阶段计划
+- `tasks/`：任务清单
+- `progress/`：当前焦点与状态
+- `retros/`：复盘记录
+- `principles/`：已确认的稳定经验
+- `archive/`：已完成或已放弃目标的归档
+- `wiki/`：项目知识与上下文
 """
 
 WORKFLOW_STATE_CONTENT = """{
   "current_goal": "",
+  "current_object": "",
   "current_stage": "",
+  "workflow_mode": "",
+  "complexity_level": "",
   "stage_status": "",
   "next_action": "",
   "pending_choice": [],
   "latest_score": 0,
   "current_question": "",
+  "reflect_status": "",
+  "pending_reflect_reason": "",
+  "pending_realize": false,
+  "last_reflect_at": "",
+  "last_realize_at": "",
   "wiki_status": "fresh",
   "pending_wiki_targets": [],
   "last_wiki_detected_at": "",
@@ -453,12 +475,20 @@ def init_workspace(target: Path, with_readme: bool, with_current_focus: bool) ->
 def blank_workflow_state() -> dict[str, object]:
     return {
         "current_goal": "",
+        "current_object": "",
         "current_stage": "",
+        "workflow_mode": "",
+        "complexity_level": "",
         "stage_status": "",
         "next_action": "",
         "pending_choice": [],
         "latest_score": 0,
         "current_question": "",
+        "reflect_status": "",
+        "pending_reflect_reason": "",
+        "pending_realize": False,
+        "last_reflect_at": "",
+        "last_realize_at": "",
         "wiki_status": "fresh",
         "pending_wiki_targets": [],
         "last_wiki_detected_at": "",

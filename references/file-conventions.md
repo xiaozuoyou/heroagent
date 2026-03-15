@@ -79,6 +79,11 @@
 
 - 使用 `assets/templates/progress-snapshot.md`
 
+建议规则：
+
+- `focus` 是观察动作，优先覆盖 `progress/current-focus.md`
+- 只有用户明确要求保留历史态势时，才额外写快照文件
+
 ### `achieve`
 
 建议目录：
@@ -116,6 +121,11 @@
 
 - 使用 `assets/templates/retrospective.md`
 
+建议规则：
+
+- 当前目标复盘优先复用与该目标同一 `slug` 的上下文材料
+- 已归档目标复盘优先链接对应归档目录，避免脱离原始资料单写结论
+
 ### `realize`
 
 建议目录：
@@ -129,6 +139,11 @@
 建议内容：
 
 - 使用 `assets/templates/principle-card.md`
+
+建议规则：
+
+- 只在 `reflect` 结论被用户确认后再写入
+- 新原则应尽量回链到来源复盘
 
 ### `master`
 
@@ -147,24 +162,25 @@
 建议规则：
 
 - `processes/` 可按需创建，不要求初始化时默认存在
-- 只有在确实沉淀稳定流程时再创建该目录
+- 只有在确实沉淀稳定执行标准时再创建该目录
 
 ### `synthesize`
 
 建议目录：
 
-- 视对象写入 `principles/` 或 `processes/`
-- 若是独立讲解稿，可暂放 `.heroagent/progress/`
+- 优先原地更新 `.heroagent/wiki/`
+- 必要时补充到 `principles/`
 
 建议规则：
 
-- 若教学内容来自已有原则或流程，优先链接原文件而不是重复造文档
+- 优先压缩已有长记录，不重复新建平行文档
+- 若压缩结果已经具备复用价值，再考虑进入 `principles/`
 
 ### `forget`
 
 建议目录：
 
-- 优先更新原有 `principles/` 或 `processes/` 文件
+- 优先更新原有 `wiki/`、`principles/` 或 `processes/` 文件
 - 必要时在 `.heroagent/retros/` 留下淘汰说明
 
 建议规则：

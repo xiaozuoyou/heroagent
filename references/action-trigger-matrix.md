@@ -23,11 +23,7 @@
 | `focus` | `current-focus.md` | 否 | 本轮同时确认了新的项目事实 |
 | `achieve` | `goals/`、`progress/`、归档信息 | 是 | 若确认没有项目事实变化，可只做收口 |
 | `abandon` | `goals/`、`progress/`、归档信息 | 否 | 放弃动作本身通常不改 wiki |
-| `reflect` | `retros/` | 否 | 复盘中顺带确认稳定项目事实时 |
-| `realize` | `principles/` | 否 | 原则本身通常不进入 wiki |
-| `master` | `processes/` 按需创建 | 否 | 流程固化改变项目级协作事实时 |
-| `synthesize` | `principles/`、`processes/`、`progress/` | 否 | 教学稿本身通常不进入 wiki |
-| `forget` | `principles/`、`processes/`、`retros/` | 否 | 若淘汰的是项目级旧约束，可补一次 detect |
+| `reflect` | `retros/`、当前目标材料或归档材料 | 否 | 复盘中顺带确认稳定项目事实时 |
 
 ## 推荐触发规则
 
@@ -42,6 +38,18 @@
 - `todo` 全部完成后，先更新完成状态，再准备进入 `achieve`
 - `achieve` 前，优先检查是否仍存在 `pending_wiki_targets`
 - 若存在待同步项，不要把“任务完成”误当成“知识已同步”
+
+### 复盘动作
+
+- `reflect` 默认先消费当前目标材料或归档材料，再决定是否落到 `retros/`
+- 不要把 `wiki` 当成复盘的唯一依据；它只负责补结构背景
+- 若复盘结论已经稳定，并且用户已确认，再内部执行 `realize`
+
+### 内部沉淀方法
+
+- `realize` 默认写入 `principles/`，不作为公开动作
+- `synthesize`、`forget` 作为 `wiki` 的内部维护方法使用
+- `master` 只在需要沉淀流程标准时使用，不作为常规用户动作
 
 ### 知识动作
 

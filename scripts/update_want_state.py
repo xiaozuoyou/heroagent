@@ -63,7 +63,10 @@ def main() -> int:
     state.update(
         {
             "current_goal": args.goal,
-            "current_stage": "want",
+            "current_object": "goal",
+            "current_stage": "clarify",
+            "workflow_mode": "interactive",
+            "complexity_level": "standard",
             "stage_status": args.status,
             "next_action": next_action,
             "pending_choice": pending_choice,

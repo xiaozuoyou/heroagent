@@ -2,7 +2,7 @@
 
 ## 目的
 
-定义如何稳定更新 `.heroagent/progress/current-focus.md`，让 `focus` 动作可以持续复用同一份当前态势文件。
+定义如何稳定更新 `.heroagent/progress/current-focus.md`，让 `focus` 这个观察动作可以持续复用同一份当前态势文件。
 
 ## 适用时机
 
