@@ -93,6 +93,8 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(state["last_reflect_at"], "")
             self.assertEqual(state["last_realize_at"], "")
             self.assertEqual(state["current_object"], "")
+            self.assertEqual(state["goal_definition"], "")
+            self.assertFalse(state["goal_confirmed"])
             self.assertEqual(state["workflow_mode"], "")
             self.assertEqual(state["complexity_level"], "")
 
@@ -171,6 +173,42 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(state["next_action"], "answer_current_question")
             self.assertEqual(state["latest_score"], 6)
             self.assertEqual(state["current_question"], "你这次最想达成的结果是什么")
+            self.assertEqual(state["goal_definition"], "")
+            self.assertFalse(state["goal_confirmed"])
+
+    def test_update_want_state_awaiting_goal_confirmation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_want_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "awaiting_goal_confirmation",
+                "--score",
+                "8",
+                "--goal-definition",
+                "两周内明确周报模板、提交流程和负责人边界，不处理绩效考核。",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["stage_status"], "awaiting_goal_confirmation")
+            self.assertEqual(state["next_action"], "confirm_goal_definition")
+            self.assertEqual(
+                state["pending_choice"],
+                ["confirm_goal_definition", "continue_want", "defer"],
+            )
+            self.assertEqual(
+                state["goal_definition"],
+                "两周内明确周报模板、提交流程和负责人边界，不处理绩效考核。",
+            )
+            self.assertFalse(state["goal_confirmed"])
 
     def test_update_want_state_ready_for_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -183,6 +221,9 @@ class HeroAgentScriptsTest(unittest.TestCase):
                 "ready_for_plan",
                 "--score",
                 "8",
+                "--goal-definition",
+                "两周内明确周报模板、提交流程和负责人边界，不处理绩效考核。",
+                "--goal-confirmed",
                 tmpdir,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -196,6 +237,29 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(state["next_action"], "confirm_plan_handoff")
             self.assertEqual(state["pending_choice"], ["~plan", "continue_want", "defer"])
             self.assertEqual(state["current_stage"], "clarify")
+            self.assertTrue(state["goal_confirmed"])
+            self.assertEqual(
+                state["goal_definition"],
+                "两周内明确周报模板、提交流程和负责人边界，不处理绩效考核。",
+            )
+
+    def test_update_want_state_ready_for_plan_requires_goal_confirmed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_want_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "ready_for_plan",
+                "--score",
+                "8",
+                "--goal-definition",
+                "两周内明确周报模板、提交流程和负责人边界，不处理绩效考核。",
+                tmpdir,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("requires --goal-confirmed", result.stderr)
 
     def test_update_wiki_signal_state_marks_pending_targets(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -733,7 +797,7 @@ class HeroAgentDocumentationTest(unittest.TestCase):
         skill_text = read_text(REPO_ROOT / "SKILL.md")
         referenced_paths = extract_backticked_values(
             skill_text,
-            r"`((?:references|assets/templates|scripts)/[^`]+)`",
+            r"`((?:references|assets/templates|scripts|examples)/[^`]+)`",
         )
 
         for relative_path in referenced_paths:
@@ -781,28 +845,37 @@ class HeroAgentDocumentationTest(unittest.TestCase):
         self.assertIn("先收敛目标，再写入本地计划文档", agent_config)
         self.assertIn("计划确认后按计划执行", agent_config)
 
+    def test_examples_capture_minimal_flows(self) -> None:
+        examples_text = read_text(REPO_ROOT / "examples" / "minimal-flows.md")
+        self.assertIn("## Want", examples_text)
+        self.assertIn("## Plan", examples_text)
+        self.assertIn("## Todo", examples_text)
+        self.assertIn("## Focus", examples_text)
+        self.assertIn("## Achieve", examples_text)
+        self.assertIn("## Reflect", examples_text)
+
     def test_requirement_scoring_keeps_threshold_and_plan_handoff(self) -> None:
-        scoring_text = read_text(REPO_ROOT / "references" / "requirement-scoring.md")
+        scoring_text = read_text(REPO_ROOT / "references" / "core" / "requirement-scoring.md")
         self.assertIn("阈值 `8`", scoring_text)
         self.assertIn("评分达到 `>= 8` 后，不直接进入 `plan`", scoring_text)
         self.assertIn("`1. 继续下一步 ~plan`", scoring_text)
 
     def test_wiki_sync_rules_keep_detect_then_sync_model(self) -> None:
-        wiki_sync_text = read_text(REPO_ROOT / "references" / "wiki-sync-rules.md")
+        wiki_sync_text = read_text(REPO_ROOT / "references" / "wiki" / "wiki-sync-rules.md")
         self.assertIn("1. `detect`：只判断本轮变更是否会让 wiki 失真，并记录待同步目标", wiki_sync_text)
         self.assertIn("2. `sync`：在关键节点再真正补写、生成草稿或合并正式 wiki", wiki_sync_text)
         self.assertIn("默认在执行 `todo` 之后、已经产生实际代码变更时，再做 `detect`", wiki_sync_text)
         self.assertIn("进入 `achieve` 或显式 `wiki` 请求前，优先补一次正式同步判断", wiki_sync_text)
 
     def test_wiki_generated_text_uses_action_or_state_wording(self) -> None:
-        common_text = read_text(REPO_ROOT / "scripts" / "common.py")
-        self.assertIn("## 读取顺序", common_text)
-        self.assertIn("## 同步状态", common_text)
-        self.assertIn("## 状态定义", common_text)
-        self.assertIn("## 写回内容", common_text)
-        self.assertIn("priority=", common_text)
-        self.assertIn("updated_at=", common_text)
-        self.assertNotIn("## 建议写回", common_text)
+        wiki_ops_text = read_text(REPO_ROOT / "scripts" / "lib" / "wiki_ops.py")
+        self.assertIn("## 读取顺序", wiki_ops_text)
+        self.assertIn("## 同步状态", wiki_ops_text)
+        self.assertIn("## 状态定义", wiki_ops_text)
+        self.assertIn("## 写回内容", wiki_ops_text)
+        self.assertIn("priority=", wiki_ops_text)
+        self.assertIn("updated_at=", wiki_ops_text)
+        self.assertNotIn("## 建议写回", wiki_ops_text)
 
 
 if __name__ == "__main__":

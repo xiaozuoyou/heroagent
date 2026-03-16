@@ -21,7 +21,7 @@ def main() -> int:
     parser.add_argument(
         "--status",
         required=True,
-        choices=["clarifying", "ready_for_plan", "paused"],
+        choices=["clarifying", "awaiting_goal_confirmation", "ready_for_plan", "paused"],
         help="Want-stage status.",
     )
     parser.add_argument(
@@ -36,12 +36,25 @@ def main() -> int:
         help="Current Socratic question when status is clarifying.",
     )
     parser.add_argument(
+        "--goal-definition",
+        default="",
+        help="Current synthesized goal definition for user confirmation.",
+    )
+    parser.add_argument(
+        "--goal-confirmed",
+        action="store_true",
+        help="Whether the user has explicitly confirmed the current goal definition.",
+    )
+    parser.add_argument(
         "target",
         nargs="?",
         default=".",
         help="Target project directory. Defaults to the current directory.",
     )
     args = parser.parse_args()
+
+    if args.status == "ready_for_plan" and not args.goal_confirmed:
+        parser.error("--status ready_for_plan requires --goal-confirmed")
 
     target = Path(args.target).resolve()
     target.mkdir(parents=True, exist_ok=True)
@@ -53,6 +66,9 @@ def main() -> int:
     if args.status == "clarifying":
         pending_choice = []
         next_action = "answer_current_question"
+    elif args.status == "awaiting_goal_confirmation":
+        pending_choice = ["confirm_goal_definition", "continue_want", "defer"]
+        next_action = "confirm_goal_definition"
     elif args.status == "ready_for_plan":
         pending_choice = ["~plan", "continue_want", "defer"]
         next_action = "confirm_plan_handoff"
@@ -63,6 +79,7 @@ def main() -> int:
     state.update(
         {
             "current_goal": args.goal,
+            "goal_definition": args.goal_definition,
             "current_object": "goal",
             "current_stage": "clarify",
             "workflow_mode": "interactive",
@@ -72,6 +89,7 @@ def main() -> int:
             "pending_choice": pending_choice,
             "latest_score": args.score,
             "current_question": args.question,
+            "goal_confirmed": args.goal_confirmed,
         }
     )
 

@@ -47,6 +47,7 @@
 只保留真正有用的细分状态：
 
 - `clarifying`
+- `awaiting_goal_confirmation`
 - `ready_for_plan`
 - `planning`
 - `plan_ready_for_confirm`
@@ -62,6 +63,7 @@
 推荐按以下方向切换：
 
 - 目标不清：进入 `want`
+- 目标已基本成形但待用户确认：保持 `want`，切到 `awaiting_goal_confirmation`
 - 目标已清但方案未收敛：进入 `plan`
 - 计划文档已写完但待确认：保持 `planning`，并把 `next_action` 设为确认计划
 - 用户确认计划后：进入 `todo`
