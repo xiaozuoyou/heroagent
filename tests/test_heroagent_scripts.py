@@ -73,6 +73,8 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertIn("内部方法", readme)
             self.assertIn("want -> plan -> todo -> achieve | abandon", readme)
             self.assertIn("`focus`：当前态势观察动作", readme)
+            self.assertIn("`todo`：基于已确认计划文档开始执行", readme)
+            self.assertIn("`plan`：负责继续沟通并写出可确认的本地计划文档", readme)
             self.assertIn("`reflect`：问题复盘入口", readme)
 
     def test_init_workflow_state_includes_reflect_fields(self) -> None:
@@ -107,10 +109,9 @@ class HeroAgentScriptsTest(unittest.TestCase):
             root = Path(tmpdir) / ".heroagent"
             goals = list((root / "goals").glob("*.md"))
             plans = list((root / "plans").glob("*.md"))
-            tasks = list((root / "tasks").glob("*.md"))
             self.assertEqual(len(goals), 1)
             self.assertEqual(len(plans), 1)
-            self.assertEqual(len(tasks), 1)
+            self.assertEqual(len(list((root / "tasks").glob("*.md"))), 0)
             self.assertIn("规范团队周报流程", goals[0].read_text(encoding="utf-8"))
 
     def test_update_current_focus_overwrites_focus_file(self) -> None:
@@ -194,6 +195,7 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(state["stage_status"], "ready_for_plan")
             self.assertEqual(state["next_action"], "confirm_plan_handoff")
             self.assertEqual(state["pending_choice"], ["~plan", "continue_want", "defer"])
+            self.assertEqual(state["current_stage"], "clarify")
 
     def test_update_wiki_signal_state_marks_pending_targets(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -267,7 +269,6 @@ class HeroAgentScriptsTest(unittest.TestCase):
             archive_dir = archive_dirs[0]
             self.assertTrue((archive_dir / f"goals__{archive_dir.name}.md").exists())
             self.assertTrue((archive_dir / f"plans__{archive_dir.name}.md").exists())
-            self.assertTrue((archive_dir / f"tasks__{archive_dir.name}.md").exists())
             self.assertTrue((archive_dir / f"progress__{progress_note.name}").exists())
             self.assertFalse(progress_note.exists())
 
@@ -305,7 +306,7 @@ class HeroAgentScriptsTest(unittest.TestCase):
                 "--section",
                 "overview",
                 "--content",
-                "## 新增说明\n\n- 支付模块负责统一收单",
+                "## 模块事实\n\n- 支付模块负责统一收单",
                 tmpdir,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -333,7 +334,7 @@ class HeroAgentScriptsTest(unittest.TestCase):
                 "--module",
                 "payments",
                 "--content",
-                "## 新增说明\n\n- 支付模块负责统一收单",
+                "## 模块事实\n\n- 支付模块负责统一收单",
                 tmpdir,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -532,7 +533,7 @@ class HeroAgentScriptsTest(unittest.TestCase):
                 "--module",
                 "payments",
                 "--content",
-                "## 新增说明\n\n- 支付模块负责统一收单",
+                "## 模块事实\n\n- 支付模块负责统一收单",
                 tmpdir,
             )
 
@@ -600,7 +601,7 @@ class HeroAgentScriptsTest(unittest.TestCase):
                 "--module",
                 "payments",
                 "--content",
-                "## 新增说明\n\n- 支付模块负责统一收单",
+                "## 模块事实\n\n- 支付模块负责统一收单",
                 tmpdir,
             )
 
@@ -716,6 +717,18 @@ class HeroAgentDocumentationTest(unittest.TestCase):
         actions = extract_backticked_values(skill_text, r"`~([a-z]+)`")
         self.assertEqual(actions, EXPECTED_ACTIONS)
 
+    def test_skill_enforces_plan_then_confirm_then_todo(self) -> None:
+        skill_text = read_text(REPO_ROOT / "SKILL.md")
+        self.assertIn("收敛后，把计划写入 `.heroagent/plans/`", skill_text)
+        self.assertIn("写完后等待用户确认", skill_text)
+        self.assertIn("用户确认计划后，进入 `todo`", skill_text)
+
+    def test_skill_enforces_todo_executes_from_confirmed_plan(self) -> None:
+        skill_text = read_text(REPO_ROOT / "SKILL.md")
+        self.assertIn("直接基于计划文档执行", skill_text)
+        self.assertIn("需要留痕时，再补最小执行记录到 `tasks/`", skill_text)
+        self.assertIn("不要把执行留痕当作进入 `todo` 的前置条件。", skill_text)
+
     def test_skill_references_existing_support_files(self) -> None:
         skill_text = read_text(REPO_ROOT / "SKILL.md")
         referenced_paths = extract_backticked_values(
@@ -762,6 +775,34 @@ class HeroAgentDocumentationTest(unittest.TestCase):
         readme_text = read_text(REPO_ROOT / "README.md")
         for script_name in INTERNAL_ONLY_SCRIPTS:
             self.assertNotIn(f"`scripts/{script_name}`", readme_text)
+
+    def test_agent_default_prompt_matches_plan_confirm_todo_flow(self) -> None:
+        agent_config = read_text(REPO_ROOT / "agents" / "openai.yaml")
+        self.assertIn("先收敛目标，再写入本地计划文档", agent_config)
+        self.assertIn("计划确认后按计划执行", agent_config)
+
+    def test_requirement_scoring_keeps_threshold_and_plan_handoff(self) -> None:
+        scoring_text = read_text(REPO_ROOT / "references" / "requirement-scoring.md")
+        self.assertIn("阈值 `8`", scoring_text)
+        self.assertIn("评分达到 `>= 8` 后，不直接进入 `plan`", scoring_text)
+        self.assertIn("`1. 继续下一步 ~plan`", scoring_text)
+
+    def test_wiki_sync_rules_keep_detect_then_sync_model(self) -> None:
+        wiki_sync_text = read_text(REPO_ROOT / "references" / "wiki-sync-rules.md")
+        self.assertIn("1. `detect`：只判断本轮变更是否会让 wiki 失真，并记录待同步目标", wiki_sync_text)
+        self.assertIn("2. `sync`：在关键节点再真正补写、生成草稿或合并正式 wiki", wiki_sync_text)
+        self.assertIn("默认在执行 `todo` 之后、已经产生实际代码变更时，再做 `detect`", wiki_sync_text)
+        self.assertIn("进入 `achieve` 或显式 `wiki` 请求前，优先补一次正式同步判断", wiki_sync_text)
+
+    def test_wiki_generated_text_uses_action_or_state_wording(self) -> None:
+        common_text = read_text(REPO_ROOT / "scripts" / "common.py")
+        self.assertIn("## 读取顺序", common_text)
+        self.assertIn("## 同步状态", common_text)
+        self.assertIn("## 状态定义", common_text)
+        self.assertIn("## 写回内容", common_text)
+        self.assertIn("priority=", common_text)
+        self.assertIn("updated_at=", common_text)
+        self.assertNotIn("## 建议写回", common_text)
 
 
 if __name__ == "__main__":

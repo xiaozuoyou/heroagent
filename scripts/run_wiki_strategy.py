@@ -110,8 +110,8 @@ def main() -> int:
             draft_text = draft_path.read_text(encoding="utf-8")
             target_name = draft_target_from_text(draft_text, draft_name=draft_path.name)
             content = extract_draft_merge_content(draft_text)
-            if not content and "## 建议写回" in draft_text:
-                content = draft_text.split("## 建议写回", 1)[1].strip()
+            if not content and "## 写回内容" in draft_text:
+                content = draft_text.split("## 写回内容", 1)[1].strip()
             if not content:
                 continue
             wiki_path = resolve_target_path(workspace, target_name)

@@ -42,6 +42,12 @@ README_CONTENT = """# .heroagent
 - `wiki`：知识维护与知识消费入口
 - `reflect`：问题复盘入口
 
+执行规则：
+
+- `plan`：负责继续沟通并写出可确认的本地计划文档
+- `todo`：基于已确认计划文档开始执行
+- `focus`：处理当前态势，不改变推进决定
+
 ## 内部方法
 
 - `realize`：复盘结论确认后，沉淀到 `principles/`
@@ -52,8 +58,8 @@ README_CONTENT = """# .heroagent
 ## 目录说明
 
 - `goals/`：目标卡
-- `plans/`：阶段计划
-- `tasks/`：任务清单
+- `plans/`：已确认的计划文档
+- `tasks/`：执行留痕，可选
 - `progress/`：当前焦点与状态
 - `retros/`：复盘记录
 - `principles/`：已确认的稳定经验
@@ -818,7 +824,7 @@ def build_wiki_registry(
         if path.name == "maintenance-report.md":
             kind = "report"
             status = "report"
-            summary = "wiki 维护巡检报告，用于提示缺失草稿、陈旧草稿与可合并草稿。"
+            summary = "wiki 维护状态，列出缺失草稿、陈旧草稿与可合并草稿。"
         documents.append(
             {
                 "path": relative_path,
@@ -857,24 +863,24 @@ def render_wiki_index(registry: dict[str, object]) -> str:
     lines = [
         "# Wiki 索引",
         "",
-        "## AI 消费顺序",
-        "1. 先读本索引，确定哪些文档最值得消费。",
+        "## 读取顺序",
+        "1. 先读本索引，确定当前应读取哪些文档。",
         "2. 再读 `overview.md` 与 `arch.md` 获取项目级背景。",
         "3. 最后按任务需要补读模块、API、数据文档。",
         "",
-        "## 当前状态",
+        "## 同步状态",
         f"- 生成时间：{registry['generated_at']}",
-        f"- 建议同步：{', '.join(suggested_updates) if suggested_updates else '无'}",
+        f"- 待同步：{', '.join(suggested_updates) if suggested_updates else '无'}",
         "",
-        "## 状态值说明",
-        "- `active`：文档已有有效内容，当前未命中同步建议。",
+        "## 状态定义",
+        "- `active`：文档已有有效内容，当前未命中同步目标。",
         "- `seed`：文档仍是初始化骨架，信息不足。",
         "- `needs_update`：本轮代码变更提示该文档应复查。",
         "- `draft`：已生成待补写草稿，但尚未合并回正式 wiki。",
         "- `report`：维护巡检报告，不参与正式 wiki 合并。",
         "",
-        "## 信号分说明",
-        "- `priority_score`：综合维护优先级，分数越高越值得优先处理。",
+        "## 信号定义",
+        "- `priority_score`：综合维护优先级，分数越高越应先处理。",
         "- `freshness_score`：文档新鲜度风险，越高表示越可能需要更新。",
         "- `density_score`：信息密度，越高表示越适合作为直接上下文。",
         "- `draft_dependency_score`：对草稿依赖程度，越高表示离稳定知识还更远。",
@@ -888,10 +894,10 @@ def render_wiki_index(registry: dict[str, object]) -> str:
         lines.append(
             "- "
             f"`{doc['path']}` | 类型：{doc['kind']} | 状态：{doc['status']} | "
-            f"优先级：{signals['priority_score']} | 新鲜度：{signals['freshness_score']} | "
-            f"密度：{signals['density_score']} | 草稿依赖：{signals['draft_dependency_score']} | "
-            f"主题：{doc['topic']} | 最近更新：{doc['last_modified']} | "
-            f"摘要：{doc['summary']} | 变更线索：{related}"
+            f"priority={signals['priority_score']} | freshness={signals['freshness_score']} | "
+            f"density={signals['density_score']} | draft_dependency={signals['draft_dependency_score']} | "
+            f"topic={doc['topic']} | updated_at={doc['last_modified']} | "
+            f"summary={doc['summary']} | changed_paths={related}"
         )
 
     return "\n".join(lines) + "\n"
@@ -962,7 +968,7 @@ def render_wiki_sync_draft(target: str, changed_paths: list[str]) -> str:
     lines.extend(
         [
             "",
-            "## 建议补写要点",
+            "## 待核对要点",
         ]
     )
     for point in focus_points:
@@ -973,10 +979,10 @@ def render_wiki_sync_draft(target: str, changed_paths: list[str]) -> str:
             "",
             "## 待补写草稿",
             f"- 本轮关联变更：{change_summary}",
-            f"- 建议核对：{focus_points[0]}",
-            f"- 建议补充：{focus_points[1]}",
+            f"- 先核对：{focus_points[0]}",
+            f"- 补充重点：{focus_points[1]}",
             "",
-            "## 处理建议",
+            "## 处理规则",
             "- 先核对代码事实，再把稳定信息写回目标 wiki 文件。",
             "- 若本轮仍不确定，保留在线索层，不要提前写成确定事实。",
         ]
@@ -1191,18 +1197,18 @@ def render_wiki_maintenance_report(
     lines.extend(
         [
             "",
-            "## 建议动作",
+            "## 后续动作",
         ]
     )
 
     if missing_drafts:
-        lines.append("- 先为缺失草稿的目标 wiki 生成待补写草稿。")
+        lines.append("- 为缺失草稿的目标 wiki 生成待补写草稿。")
     if stale_drafts:
         lines.append("- 复查陈旧草稿，确认是否重生成、更新或删除。")
     if ready_drafts:
         lines.append("- 将已确认的草稿合并回正式 wiki。")
     if not missing_drafts and not stale_drafts and not ready_drafts:
-        lines.append("- 当前无需额外维护动作。")
+        lines.append("- 当前无需额外维护。")
 
     return "\n".join(lines) + "\n"
 
@@ -1294,7 +1300,7 @@ def render_extracted_facts(target: str, facts: list[str]) -> str:
     lines.extend(
         [
             "",
-            "## 建议写回",
+            "## 写回内容",
         ]
     )
     for fact in facts:
@@ -1342,7 +1348,7 @@ def merge_fact_draft_into_target(workspace: Path, draft_path: Path) -> Path:
     draft_text = draft_path.read_text(encoding="utf-8")
     target = draft_target_from_text(draft_text, draft_name=draft_path.name)
     match = re.search(
-        r"^## 建议写回\s*(.*)$",
+        r"^## 写回内容\s*(.*)$",
         draft_text,
         flags=re.MULTILINE | re.DOTALL,
     )

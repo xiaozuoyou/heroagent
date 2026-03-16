@@ -2,20 +2,17 @@
 
 ## 目的
 
-定义 `heroagent` 首次进入一个项目时，`.heroagent/` 目录应该如何建立，避免每次初始化结构不一致。
+定义 `.heroagent/` 的最小初始化结构。
 
 ## 适用时机
 
-在以下场景优先初始化 `.heroagent/`：
+命中以下场景时优先初始化：
 
-- 用户明确要求把结果持续落盘
-- 当前任务是长期推进，不是一次性问答
-- 目标、计划、任务、复盘需要形成连续记录
-- 用户明确要求“初始化”“接管老项目”“开始接入 heroagent”
+- 用户明确要求长期落盘
+- 当前任务需要持续推进
+- 用户明确说“初始化”“接管老项目”“开始接入 heroagent”
 
-如果任务只是单轮讨论，不强制创建 `.heroagent/`。
-
-## 推荐目录结构
+## 初始化结构
 
 ```text
 .heroagent/
@@ -25,65 +22,27 @@
 ├── progress/
 ├── retros/
 ├── principles/
-└── archive/
+├── archive/
+└── wiki/
 ```
-
-## 初始化时应创建的基础文件
-
-建议同时创建以下占位文件：
-
-- `.heroagent/goals/.gitkeep`
-- `.heroagent/plans/.gitkeep`
-- `.heroagent/tasks/.gitkeep`
-- `.heroagent/progress/.gitkeep`
-- `.heroagent/retros/.gitkeep`
-- `.heroagent/principles/.gitkeep`
-- `.heroagent/archive/.gitkeep`
-
-## 可选启动文件
-
-如果用户希望进入持续工作模式，可额外创建：
-
-- `.heroagent/README.md`
-- `.heroagent/progress/current-focus.md`
-
-推荐用途：
-
-- `README.md`：说明目录用途与工作规则
-- `current-focus.md`：记录当前主目标、阶段、阻塞与下一步
 
 ## 初始化原则
 
 - 默认不覆盖已有文件
 - 已存在目录时只补缺失项
-- 若用户未指定初始化范围，先创建最小可用结构
-- 初始化结果应可直接被 `want`、`plan`、`todo`、`focus` 等动作复用
-- 命中初始化意图时，优先直接运行 `scripts/init_heroagent.py`，不要只口头说明步骤
+- 初始化后应能直接承接 `want`、`plan`、`todo`
+- 命中初始化意图时，优先直接运行 `scripts/init_heroagent.py`
 
-## 最小可用结构
+## 可选文件
 
-若只允许创建最少内容，至少创建：
+需要持续模式时，可额外创建：
 
-```text
-.heroagent/
-├── goals/
-├── plans/
-├── tasks/
-└── progress/
-```
+- `.heroagent/README.md`
+- `.heroagent/progress/current-focus.md`
+- `.heroagent/progress/workflow-state.json`
 
-若后续进入流程标准沉淀场景，再按需创建：
+## 初始化后的下一步
 
-```text
-.heroagent/processes/
-```
-
-## 初始化后的推荐第一步
-
-初始化完成后，优先执行以下动作之一：
-
-1. 若目标不清，执行 `want`
-2. 若目标已清，执行 `plan`
-3. 若计划已清，执行 `todo`
-
-不要只创建目录而不给出下一步。
+1. 目标不清，进入 `want`
+2. 目标已清，进入 `plan`
+3. 计划已确认，进入 `todo`

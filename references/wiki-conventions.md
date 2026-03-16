@@ -2,11 +2,11 @@
 
 ## 目的
 
-定义 `.heroagent/wiki/` 的目录结构、维护方式，以及 HeroAgent 在何时应消费这些知识作为上下文。
+定义 `.heroagent/wiki/` 的目录结构、维护方式和消费时机。
 
-## 核心原则
+## 执行原则
 
-- wiki 不只是存储区，也是优先上下文来源
+- 把 wiki 作为优先上下文来源
 - 能从 wiki 获取的项目信息，优先不再向用户重复追问
 - wiki 与代码冲突时，以代码事实为准，并更新 wiki
 
@@ -35,13 +35,13 @@
 - `data.md`：核心实体、字段约束、数据流
 - `modules/*.md`：模块级补充知识
 
-模块级 wiki 建议按单模块单文件维护，例如：
+模块级 wiki 按单模块单文件维护，例如：
 
 - `modules/payments.md`
 - `modules/auth.md`
 - `modules/reporting.md`
 
-## 何时优先消费 wiki
+## 消费时机
 
 在以下场景，优先读取 `.heroagent/wiki/`：
 
@@ -51,9 +51,9 @@
 - `focus` 前需要补齐当前背景
 - `reflect` 时需要结合历史架构或数据背景判断根因
 
-## 何时更新 wiki
+## 更新时机
 
-在以下场景，应考虑更新 wiki：
+在以下场景，触发 wiki 更新判断：
 
 - 初始化工作区后，开始接管老项目
 - 对现有模块形成了更清晰认知
@@ -62,9 +62,9 @@
 
 若已知本轮变更路径，先参考 `references/wiki-sync-rules.md` 推导应更新的 wiki 文件，再做最小改动。
 
-若本轮还不适合直接改正文，先在 `wiki/drafts/` 生成待补写草稿，再由 AI 合并回正式 wiki。
+若本轮先不改正文，先在 `wiki/drafts/` 生成草稿，再合并回正式 wiki。
 
-推荐闭环：
+执行闭环：
 
 1. 根据变更生成 `drafts/`
 2. AI 审阅并补强草稿
@@ -80,11 +80,11 @@
 
 ## 消费顺序
 
-默认顺序：
+按以下顺序：
 
 1. 先读 `wiki/index.md` 或 `wiki/registry.json`
 2. 再读 `.heroagent/wiki/` 中被索引标记为最相关的文件
 3. wiki 不足，再读 `.heroagent/progress/`、`goals/`、`plans/`
 4. 仍不足，再扫描代码或继续追问用户
 
-不要跳过 wiki 直接扫描代码。
+只有 wiki 不足时，再继续扫描代码。

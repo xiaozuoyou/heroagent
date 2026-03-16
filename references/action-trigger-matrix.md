@@ -1,73 +1,26 @@
 # 动作触发矩阵
 
-## 目的
+## 使用规则
 
-明确 `heroagent` 各动作默认更新什么对象、是否触发 wiki 判断，以及哪些情况属于例外，避免把工作流状态和项目事实混在一起维护。
+按下表决定每个动作更新什么对象，以及何时补 wiki 判断。
 
-## 总体规则
+## 触发矩阵
 
-- `goals plans tasks progress` 主要记录工作流状态
-- `wiki` 主要记录项目事实，如模块职责、接口契约、数据结构、架构约束
-- 默认先更新工作流状态，再判断是否需要更新 wiki
-- 只有在代码或稳定项目事实发生变化时，才默认触发 wiki `detect`
-
-## 动作矩阵
-
-| 动作 | 默认更新对象 | 默认是否触发 wiki detect | 何时例外触发 wiki detect |
+| 动作 | 默认更新对象 | 默认是否触发 wiki 判断 | 执行 |
 | --- | --- | --- | --- |
-| `init` | `.heroagent/` 工作区、基础 wiki 骨架 | 否 | 无 |
-| `wiki` | `.heroagent/wiki/` | 是 | 无，显式命中时直接处理 |
-| `want` | `goals/`、`workflow-state.json` | 否 | 需求边界被明确改写为项目级事实 |
-| `plan` | `plans/`、`current-focus.md` | 否 | 已明确调整架构约束、接口策略或数据边界 |
-| `todo` | `tasks/`、`current-focus.md`、完成状态 | 否 | 任务拆解时已经确认稳定技术事实 |
-| `focus` | `current-focus.md` | 否 | 本轮同时确认了新的项目事实 |
-| `achieve` | `goals/`、`progress/`、归档信息 | 是 | 若确认没有项目事实变化，可只做收口 |
-| `abandon` | `goals/`、`progress/`、归档信息 | 否 | 放弃动作本身通常不改 wiki |
-| `reflect` | `retros/`、当前目标材料或归档材料 | 否 | 复盘中顺带确认稳定项目事实时 |
+| `init` | `.heroagent/` 工作区 | 否 | 建基础结构 |
+| `want` | `goals/`、`workflow-state.json` | 否 | 更新目标状态 |
+| `plan` | `plans/`、`current-focus.md` | 否 | 更新计划与当前态势 |
+| `todo` | `current-focus.md`、执行状态 | 否 | 更新执行状态；需要留痕时再补 `tasks/` |
+| `focus` | `current-focus.md` | 否 | 更新当前态势 |
+| `achieve` | 目标状态、进度、归档信息 | 是 | 验收前检查待同步知识 |
+| `abandon` | 目标状态、进度、归档信息 | 否 | 更新停损与收口状态 |
+| `reflect` | `retros/`、相关目标材料 | 否 | 更新复盘材料 |
+| `wiki` | `.heroagent/wiki/` | 是 | 处理知识更新 |
 
-## 推荐触发规则
+## 补充规则
 
-### 工作流动作
-
-- `want`、`plan`、`todo` 默认只维护工作流状态
-- 这些动作结束后，优先更新目标、计划、任务和当前焦点
-- 不要因为讨论内容变多，就默认触发 wiki 判断
-
-### 执行动作
-
-- `todo` 全部完成后，先更新完成状态，再准备进入 `achieve`
-- `achieve` 前，优先检查是否仍存在 `pending_wiki_targets`
-- 若存在待同步项，不要把“任务完成”误当成“知识已同步”
-
-### 复盘动作
-
-- `reflect` 默认先消费当前目标材料或归档材料，再决定是否落到 `retros/`
-- 不要把 `wiki` 当成复盘的唯一依据；它只负责补结构背景
-- 若复盘结论已经稳定，并且用户已确认，再内部执行 `realize`
-
-### 内部沉淀方法
-
-- `realize` 默认写入 `principles/`，不作为公开动作
-- `synthesize`、`forget` 作为 `wiki` 的内部维护方法使用
-- `master` 只在需要沉淀流程标准时使用，不作为常规用户动作
-
-### 知识动作
-
-- `wiki` 是唯一默认直接面向知识库的动作
-- 命中 `wiki` 时，不需要再问“要不要先 detect”，因为它本身就在处理知识维护
-
-## 最小联动建议
-
-推荐把动作结束后的联动理解成：
-
-1. 先更新动作本身的主对象
-2. 再判断是否产生了项目事实变化
-3. 若产生事实变化，标记 `wiki_status = needs_sync`
-4. 到 `achieve` 或显式 `wiki` 时，再决定是否正式同步
-
-## 常见误区
-
-- 把 `todo` 清单变化误当成 wiki 变化
-- 把需求讨论变化误当成项目事实变化
-- 把草稿生成误当成正式同步完成
-- 把任务完成误当成目标达成，或误当成 wiki 已同步
+- `want`、`plan`、`todo` 主要维护工作流状态，不默认改 wiki
+- 只有项目事实被显式改写时，才额外标记 `wiki_status = needs_sync`
+- `todo` 的执行留痕不等于 wiki 变化
+- `achieve` 前，应检查是否还有待同步知识

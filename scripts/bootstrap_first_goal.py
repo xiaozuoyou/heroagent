@@ -9,10 +9,10 @@ import argparse
 from pathlib import Path
 
 from common import init_workspace
-from common import render_template
 from common import safe_write
 from common import slugify
 from common import timestamp_now
+from common import render_template
 
 
 def goal_card(goal_title: str) -> str:
@@ -28,14 +28,7 @@ def goal_card(goal_title: str) -> str:
 def milestone_plan() -> str:
     return render_template(
         "milestone-plan.md",
-        next_step="根据目标卡片补齐阶段路径",
-    )
-
-
-def todo_list() -> str:
-    return render_template(
-        "todo-list.md",
-        next_step="根据里程碑计划拆解第一批可执行任务",
+        next_step="先补齐推荐方案、关键取舍和进入执行条件",
     )
 
 
@@ -45,10 +38,10 @@ def current_focus(goal_title: str, stage: str) -> str:
         fields={
             "当前目标": goal_title,
             "当前阶段": stage,
-            "已完成": "已初始化 HeroAgent 工作区与首批草稿文件",
-            "进行中": "补全目标与计划",
+            "已完成": "已初始化 HeroAgent 工作区与首批目标、方案草稿",
+            "进行中": "补全目标与方案",
             "阻塞": "",
-            "下一步": "先完善目标卡片，再细化里程碑计划",
+            "下一步": "先完善目标卡片，再把方案收敛成可确认计划",
         },
     )
 
@@ -64,9 +57,6 @@ def bootstrap(target: Path, goal_title: str, stage: str, refresh_focus: bool) ->
     )
     created.append(
         safe_write(workspace / "plans" / f"{ts}_{slug}.md", milestone_plan())
-    )
-    created.append(
-        safe_write(workspace / "tasks" / f"{ts}_{slug}.md", todo_list())
     )
 
     focus_path = workspace / "progress" / "current-focus.md"
