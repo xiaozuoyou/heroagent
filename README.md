@@ -77,6 +77,7 @@ npx skills add xiaozuoyou/heroagent
 - `scripts/update_current_focus.py`
 - `scripts/archive_goal.py`
 - `scripts/doctor_heroagent.py`
+- `scripts/update_plan_state.py`
 - `scripts/update_want_state.py`
 - `scripts/update_wiki_context.py`
 - `scripts/suggest_wiki_updates.py`

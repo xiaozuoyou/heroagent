@@ -94,9 +94,83 @@ class HeroAgentScriptsTest(unittest.TestCase):
             self.assertEqual(state["last_realize_at"], "")
             self.assertEqual(state["current_object"], "")
             self.assertEqual(state["goal_definition"], "")
+            self.assertEqual(state["active_plan_path"], "")
+            self.assertEqual(state["plan_summary"], "")
+            self.assertFalse(state["plan_confirmed"])
             self.assertFalse(state["goal_confirmed"])
             self.assertEqual(state["workflow_mode"], "")
             self.assertEqual(state["complexity_level"], "")
+
+    def test_update_plan_state_planning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_plan_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "planning",
+                "--plan-path",
+                ".heroagent/plans/202603161200_weekly-report.md",
+                "--plan-summary",
+                "先收敛模板和责任边界，再进入试运行。",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["current_object"], "plan")
+            self.assertEqual(state["current_stage"], "planning")
+            self.assertEqual(state["stage_status"], "planning")
+            self.assertEqual(state["next_action"], "continue_plan_alignment")
+            self.assertEqual(state["active_plan_path"], ".heroagent/plans/202603161200_weekly-report.md")
+            self.assertEqual(state["plan_summary"], "先收敛模板和责任边界，再进入试运行。")
+            self.assertFalse(state["plan_confirmed"])
+
+    def test_update_plan_state_ready_for_confirm(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_plan_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "plan_ready_for_confirm",
+                "--plan-path",
+                ".heroagent/plans/202603161200_weekly-report.md",
+                "--plan-summary",
+                "两周内完成模板、流程和试运行。",
+                tmpdir,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            state = json.loads(
+                (Path(tmpdir) / ".heroagent" / "progress" / "workflow-state.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(state["stage_status"], "plan_ready_for_confirm")
+            self.assertEqual(state["next_action"], "confirm_plan")
+            self.assertEqual(state["pending_choice"], ["confirm_plan", "continue_plan", "defer"])
+
+    def test_update_plan_state_confirmed_requires_plan_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_script("init_heroagent.py", tmpdir)
+            result = run_script(
+                "update_plan_state.py",
+                "--goal",
+                "规范团队周报流程",
+                "--status",
+                "plan_ready_for_confirm",
+                "--plan-confirmed",
+                tmpdir,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("requires --plan-path", result.stderr)
 
     def test_bootstrap_creates_seed_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -783,6 +857,8 @@ class HeroAgentDocumentationTest(unittest.TestCase):
 
     def test_skill_enforces_plan_then_confirm_then_todo(self) -> None:
         skill_text = read_text(REPO_ROOT / "SKILL.md")
+        self.assertIn("进入 `plan` 前，先恢复当前计划上下文", skill_text)
+        self.assertIn("持续维护计划内的当前状态、已知事实、风险与失败记录", skill_text)
         self.assertIn("收敛后，把计划写入 `.heroagent/plans/`", skill_text)
         self.assertIn("写完后等待用户确认", skill_text)
         self.assertIn("用户确认计划后，进入 `todo`", skill_text)
@@ -843,7 +919,14 @@ class HeroAgentDocumentationTest(unittest.TestCase):
     def test_agent_default_prompt_matches_plan_confirm_todo_flow(self) -> None:
         agent_config = read_text(REPO_ROOT / "agents" / "openai.yaml")
         self.assertIn("先收敛目标，再写入本地计划文档", agent_config)
+        self.assertIn("先恢复当前计划、focus 与 workflow 状态", agent_config)
         self.assertIn("计划确认后按计划执行", agent_config)
+
+    def test_plan_template_keeps_working_memory_sections(self) -> None:
+        template_text = read_text(REPO_ROOT / "assets" / "templates" / "milestone-plan.md")
+        self.assertIn("- 当前状态：", template_text)
+        self.assertIn("## 已知事实", template_text)
+        self.assertIn("## 风险与失败记录", template_text)
 
     def test_examples_capture_minimal_flows(self) -> None:
         examples_text = read_text(REPO_ROOT / "examples" / "minimal-flows.md")

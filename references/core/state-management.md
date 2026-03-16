@@ -12,6 +12,8 @@
 
 - `current_goal`
 - `current_object`
+- `active_plan_path`
+- `plan_summary`
 - `current_stage`
 - `workflow_mode`
 - `complexity_level`
@@ -65,7 +67,8 @@
 - 目标不清：进入 `want`
 - 目标已基本成形但待用户确认：保持 `want`，切到 `awaiting_goal_confirmation`
 - 目标已清但方案未收敛：进入 `plan`
-- 计划文档已写完但待确认：保持 `planning`，并把 `next_action` 设为确认计划
+- 进入 `plan` 时，先恢复 `active_plan_path`、计划摘要和当前焦点
+- 计划文档已写完但待确认：保持 `planning`，并把 `stage_status` 设为 `plan_ready_for_confirm`，同时把 `next_action` 设为确认计划
 - 用户确认计划后：进入 `todo`
 - 执行完成：切到 `ready_for_review`
 - 用户要求验收：进入 `achieve`

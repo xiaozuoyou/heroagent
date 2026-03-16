@@ -116,6 +116,9 @@ def blank_workflow_state() -> dict[str, object]:
     return {
         "current_goal": "",
         "goal_definition": "",
+        "active_plan_path": "",
+        "plan_summary": "",
+        "plan_confirmed": False,
         "current_object": "",
         "current_stage": "",
         "workflow_mode": "",

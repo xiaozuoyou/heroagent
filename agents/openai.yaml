@@ -1,7 +1,7 @@
 interface:
   display_name: "HeroAgent"
   short_description: "先收敛目标与计划，确认后执行，并支持验收、复盘与 wiki 维护"
-  default_prompt: "使用 $heroagent 帮我先收敛目标，再写入本地计划文档；计划确认后按计划执行，并在需要时做验收、复盘或同步 wiki。"
+  default_prompt: "使用 $heroagent 帮我先收敛目标，再写入本地计划文档；进入 plan 时先恢复当前计划、focus 与 workflow 状态，计划确认后按计划执行，并在需要时做验收、复盘或同步 wiki。"
   icon_small: "assets/heroagent-icon.png"
   icon_large: "assets/heroagent-icon.png"
   brand_color: "#3B82F6"

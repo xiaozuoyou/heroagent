@@ -35,6 +35,7 @@ README_CONTENT = """# .heroagent
 执行规则：
 
 - `plan`：负责继续沟通并写出可确认的本地计划文档
+- `plan` 恢复上下文时，优先读取当前计划文档、`progress/current-focus.md` 与 `progress/workflow-state.json`
 - `todo`：基于已确认计划文档开始执行
 - `focus`：处理当前态势，不改变推进决定
 
@@ -60,6 +61,9 @@ README_CONTENT = """# .heroagent
 WORKFLOW_STATE_CONTENT = """{
   "current_goal": "",
   "goal_definition": "",
+  "active_plan_path": "",
+  "plan_summary": "",
+  "plan_confirmed": false,
   "current_object": "",
   "current_stage": "",
   "workflow_mode": "",
